@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --header-h: 64px;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Soft blush wash behind the whole storefront, mirroring the reference art direction. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(900px 500px at 12% -5%, #FCEFEE 0%, transparent 60%),
+      radial-gradient(700px 480px at 92% 8%, #FBF2F5 0%, transparent 62%),
+      #FDFAF9;
+  }
+
+  ::selection {
+    @apply bg-wine-200 text-wine-900;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-wine-400 ring-offset-2 ring-offset-canvas rounded-md;
+  }
+}
+
+@layer components {
+  .container-e {
+    @apply mx-auto w-full max-w-[1200px] px-5 sm:px-6 lg:px-8;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-rose;
+  }
+  .eyebrow::after {
+    content: '';
+    @apply block h-px w-8 bg-rose/40;
+  }
+
+  .card {
+    @apply rounded-card border border-line bg-white shadow-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition
+           duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-wine text-white hover:bg-wine-700 active:scale-[.985];
+  }
+  .btn-ghost {
+    @apply btn border border-line bg-white text-ink hover:border-wine-200 hover:bg-wine-50;
+  }
+  .btn-quiet {
+    @apply btn text-muted hover:bg-wine-50 hover:text-wine;
+  }
+
+  .field {
+    @apply w-full rounded-lg border border-transparent bg-blush px-3.5 py-2.5 text-sm text-ink
+           placeholder:text-muted/70 transition focus:border-wine-200 focus:bg-white;
+  }
+
+  .pill {
+    @apply inline-flex shrink-0 items-center gap-2 rounded-full border border-line bg-white px-4 py-2
+           text-sm text-ink transition hover:border-wine-200 hover:text-wine;
+  }
+  .pill-active {
+    @apply border-wine bg-wine text-white hover:border-wine hover:text-white;
+  }
+
+  /* Horizontal rails that scroll on touch but hide their scrollbar. */
+  .rail {
+    @apply flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2;
+    scrollbar-width: none;
+  }
+  .rail::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
