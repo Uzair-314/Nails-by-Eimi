@@ -7,6 +7,7 @@ export const MENU_LINKS = [
   { label: 'Home', to: '/', icon: 'home' },
   { label: 'New Arrivals', to: '/new-arrivals', icon: 'sparkle' },
   { label: 'Gel Nails', to: '/gel-nails', icon: 'nail' },
+  { label: 'Wishlist', to: '/account/wishlist', icon: 'heart' },
   { label: 'Contact Us', to: '/contact', icon: 'mail' },
   { label: 'Rewards / Loyalty', to: '/rewards', icon: 'gift' },
   { label: 'Search', to: '/search', icon: 'search' },

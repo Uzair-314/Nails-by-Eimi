@@ -8,8 +8,17 @@ import { useStore } from '../context/StoreContext'
  * down to just the search and cart controls.
  */
 export default function Header({ onOpenMenu, onOpenSearch }) {
-  const { count } = useStore()
+  const { count, wishlist } = useStore()
   const navigate = useNavigate()
+
+  const badge = (n) => (
+    <span
+      className="absolute right-1 top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full
+                 bg-wine px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-canvas"
+    >
+      {n > 99 ? '99+' : n}
+    </span>
+  )
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/85 backdrop-blur-md">
@@ -53,19 +62,22 @@ export default function Header({ onOpenMenu, onOpenSearch }) {
 
           <button
             type="button"
+            onClick={() => navigate('/account/wishlist')}
+            aria-label={`Wishlist, ${wishlist.length} ${wishlist.length === 1 ? 'item' : 'items'}`}
+            className="relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-wine-50 hover:text-wine"
+          >
+            <Icon name="heart" size={20} />
+            {wishlist.length > 0 && badge(wishlist.length)}
+          </button>
+
+          <button
+            type="button"
             onClick={() => navigate('/cart')}
             aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`}
             className="relative grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-wine-50 hover:text-wine"
           >
             <Icon name="cart" size={21} />
-            {count > 0 && (
-              <span
-                className="absolute right-1 top-1 grid h-[18px] min-w-[18px] place-items-center rounded-full
-                           bg-wine px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-canvas"
-              >
-                {count > 99 ? '99+' : count}
-              </span>
-            )}
+            {count > 0 && badge(count)}
           </button>
         </div>
       </div>
