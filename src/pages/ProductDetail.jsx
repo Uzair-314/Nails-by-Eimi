@@ -5,7 +5,7 @@ import ProductCard from '../components/ProductCard'
 import { Badge, Rating, Skeleton } from '../components/ui'
 import useAsync from '../hooks/useAsync'
 import { getProduct, listRelated } from '../lib/api'
-import { formatPrice } from '../lib/format'
+import { formatPrice, pointsFor } from '../lib/format'
 import { useStore } from '../context/StoreContext'
 import { CATEGORY_NAMES } from '../data/navigation'
 
@@ -148,9 +148,9 @@ export default function ProductDetail() {
 
           <div className="card mt-8 divide-y divide-line p-0">
             {[
-              { icon: 'truck', title: 'Free UK delivery over £50', body: 'Dispatched next working day from South London.' },
+              { icon: 'truck', title: 'Free delivery over Rs 5,000', body: 'Dispatched next working day from the studio.' },
               { icon: 'shield', title: '30-day returns', body: 'Unopened sets, prepaid label in every box.' },
-              { icon: 'gift', title: `Earn ${Math.round(product.price * 5)} points`, body: 'Redeemable against any future order.' },
+              { icon: 'gift', title: `Earn ${pointsFor(product.price)} points`, body: 'Redeemable against any future order.' },
             ].map((row) => (
               <div key={row.title} className="flex items-start gap-3.5 p-4">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blush text-wine">

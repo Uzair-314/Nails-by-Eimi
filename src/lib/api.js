@@ -9,6 +9,7 @@
  */
 
 import { PRODUCTS, categoriesFor } from '../data/products'
+import { pointsFor } from './format'
 import {
   SEED_ADDRESSES, SEED_CARDS, SEED_NAIL_PROFILE, SEED_ORDERS, SEED_POINT_HISTORY, SEED_USER,
 } from '../data/account'
@@ -117,9 +118,9 @@ export function createOrder({ items, total, addressId }) {
   }
   write('orders', [order, ...orders])
 
-  // Loyalty: five points per unit of currency spent.
+  // Loyalty: rate lives in POINTS_PER_UNIT in lib/format.
   const user = read('user', SEED_USER)
-  const earned = Math.round(total * 5)
+  const earned = pointsFor(total)
   write('user', { ...user, points: user.points + earned })
   write('points', [
     { id: uid('h'), date: order.placedAt, label: `Order ${order.id}`, points: earned },

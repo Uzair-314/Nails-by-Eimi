@@ -3,8 +3,9 @@ import Icon from './Icon'
 import { useStore } from '../context/StoreContext'
 
 /**
- * Minimal storefront header: hamburger on the left, wordmark centred,
- * search and cart on the right. The cart carries a live count badge.
+ * Below `lg`: hamburger, centred wordmark, search and cart.
+ * From `lg` up: the sidebar carries the brand and navigation, so this slims
+ * down to just the search and cart controls.
  */
 export default function Header({ onOpenMenu, onOpenSearch }) {
   const { count } = useStore()
@@ -12,19 +13,21 @@ export default function Header({ onOpenMenu, onOpenSearch }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line/70 bg-canvas/85 backdrop-blur-md">
-      <div className="container-e flex h-16 items-center justify-between gap-2">
+      <div className="mx-auto flex h-16 w-full max-w-[1200px] items-center justify-between gap-2 px-5 sm:px-6 lg:px-8">
         <button
           type="button"
           onClick={onOpenMenu}
           aria-label="Open menu"
-          className="-ml-2 grid h-11 w-11 place-items-center rounded-full text-ink transition hover:bg-wine-50 hover:text-wine"
+          className="-ml-2 grid h-11 w-11 place-items-center rounded-full text-ink transition
+                     hover:bg-wine-50 hover:text-wine lg:hidden"
         >
           <Icon name="menu" size={22} />
         </button>
 
+        {/* Wordmark only where the sidebar is not showing it. */}
         <Link
           to="/"
-          className="flex min-w-0 flex-col items-center leading-none"
+          className="flex min-w-0 flex-col items-center leading-none lg:hidden"
           aria-label="Nails By Eimi — home"
         >
           <span className="font-display text-[22px] font-semibold tracking-[0.02em] text-wine sm:text-[25px]">
@@ -34,6 +37,9 @@ export default function Header({ onOpenMenu, onOpenSearch }) {
             Press-on Atelier
           </span>
         </Link>
+
+        {/* Pushes the controls right on desktop, where nothing sits on the left. */}
+        <div className="hidden flex-1 lg:block" />
 
         <div className="-mr-2 flex items-center">
           <button

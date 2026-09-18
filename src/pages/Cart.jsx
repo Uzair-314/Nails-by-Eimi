@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { EmptyState, PageHeading } from '../components/ui'
-import { formatPrice } from '../lib/format'
+import { SHIPPING, formatPrice } from '../lib/format'
 import { useStore } from '../context/StoreContext'
 
 export default function Cart() {
@@ -23,7 +23,7 @@ export default function Cart() {
     )
   }
 
-  const toFreeShipping = Math.max(0, 50 - subtotal)
+  const toFreeShipping = Math.max(0, SHIPPING.freeOver - subtotal)
 
   return (
     <div className="container-e py-12">
@@ -94,7 +94,7 @@ export default function Cart() {
                 <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
                   <div
                     className="h-full rounded-full bg-wine transition-all duration-500"
-                    style={{ width: `${Math.min(100, (subtotal / 50) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (subtotal / SHIPPING.freeOver) * 100)}%` }}
                   />
                 </div>
               </div>

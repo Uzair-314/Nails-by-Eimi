@@ -70,7 +70,7 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-line pt-6 sm:flex-row">
           <p className="text-[12px] text-muted">© {new Date().getFullYear()} Nails By Eimi. All rights reserved.</p>
-          <p className="text-[12px] text-muted">Free UK delivery over £50 · 30-day returns</p>
+          <p className="text-[12px] text-muted">Free delivery over Rs 5,000 · 30-day returns</p>
         </div>
       </div>
     </footer>

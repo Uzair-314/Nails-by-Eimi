@@ -4,7 +4,7 @@ import Icon from '../components/Icon'
 import { Badge, EmptyState, PageHeading } from '../components/ui'
 import useAsync from '../hooks/useAsync'
 import { createOrder, listAddresses, listCards } from '../lib/api'
-import { formatPrice } from '../lib/format'
+import { formatPrice, pointsFor } from '../lib/format'
 import { useStore } from '../context/StoreContext'
 
 export default function Checkout() {
@@ -170,7 +170,7 @@ export default function Checkout() {
               {!placing && <Icon name="arrowRight" size={16} />}
             </button>
             <p className="mt-3 text-center text-[12px] text-muted">
-              You will earn {Math.round(total * 5)} points on this order.
+              You will earn {pointsFor(total)} points on this order.
             </p>
           </div>
         </aside>

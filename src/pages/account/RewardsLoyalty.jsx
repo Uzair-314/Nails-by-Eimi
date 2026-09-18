@@ -74,7 +74,7 @@ export default function RewardsLoyalty() {
       <PageHeading
         eyebrow={`Eimi Club privileges · member since ${user.memberSince}`}
         title="Rewards & Loyalty"
-        subtitle="Five points for every £1 spent. Redeem them against anything in the store."
+        subtitle="Earn points on every order. Redeem them against anything in the store."
       />
 
       <div className="mt-7 grid gap-6 lg:grid-cols-[1fr_300px]">

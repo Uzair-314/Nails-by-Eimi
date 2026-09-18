@@ -8,10 +8,10 @@ import useAsync from '../hooks/useAsync'
 import { CATEGORY_LINKS } from '../data/navigation'
 
 const PROMISES = [
-  { icon: 'truck', title: 'Free UK delivery', body: 'On every order over £50, dispatched next working day.' },
+  { icon: 'truck', title: 'Free delivery', body: 'On every order over Rs 5,000, dispatched next working day.' },
   { icon: 'leaf', title: 'HEMA-free formulas', body: 'Gentler chemistry across the whole gel range.' },
   { icon: 'shield', title: '30-day returns', body: 'Unopened sets, no questions, prepaid label included.' },
-  { icon: 'gift', title: 'Points on everything', body: 'Five points per £1, redeemable against any order.' },
+  { icon: 'gift', title: 'Points on everything', body: 'Two points per Rs 100, redeemable against any order.' },
 ]
 
 function Shelf({ eyebrow, title, to, query }) {
@@ -112,7 +112,7 @@ export default function Home() {
         <div className="card overflow-hidden bg-gradient-to-br from-wine-50 via-white to-wine-100/60 px-7 py-12 text-center sm:px-12">
           <p className="eyebrow justify-center">Eimi Club</p>
           <h2 className="mt-3 font-display text-[30px] font-semibold leading-tight text-ink sm:text-[36px]">
-            Five points for every £1 spent
+            Points on every order
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-muted">
             Members get early access to drops, free shipping from Gold, and a set on us every birthday.

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Header from './Header'
+import Sidebar from './Sidebar'
 import SideDrawer from './SideDrawer'
 import SearchOverlay from './SearchOverlay'
 import Footer from './Footer'
@@ -19,7 +20,7 @@ export default function Layout() {
   const closeSearch = useCallback(() => setSearchOpen(false), [])
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg
@@ -28,15 +29,21 @@ export default function Layout() {
         Skip to content
       </a>
 
-      <Header onOpenMenu={() => setMenuOpen(true)} onOpenSearch={() => setSearchOpen(true)} />
+      {/* Always on screen from lg up; below that the drawer takes over. */}
+      <Sidebar />
       <SideDrawer open={menuOpen} onClose={closeMenu} />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Header onOpenMenu={() => setMenuOpen(true)} onOpenSearch={() => setSearchOpen(true)} />
+
+        <main id="main" className="flex-1">
+          <Outlet />
+        </main>
+
+        <Footer />
+      </div>
+
       <SearchOverlay open={searchOpen} onClose={closeSearch} />
-
-      <main id="main" className="flex-1">
-        <Outlet />
-      </main>
-
-      <Footer />
       <Toasts toasts={toasts} />
     </div>
   )

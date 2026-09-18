@@ -110,7 +110,7 @@ export const REWARD_TIERS = [
 ]
 
 export const SEED_REWARDS = [
-  { id: 'r1', title: '£10 off your next order', cost: 1000, blurb: 'Applies to any order over £40.' },
+  { id: 'r1', title: 'Rs 1,500 off your next order', cost: 1000, blurb: 'Applies to any order over Rs 6,000.' },
   { id: 'r2', title: 'Free Chrome Powder Trio', cost: 1800, blurb: 'Added to your next shipment.' },
   { id: 'r3', title: 'Free express shipping', cost: 600, blurb: 'Next-day delivery on one order.' },
   { id: 'r4', title: 'Bespoke set consultation', cost: 3200, blurb: 'A 30-minute session with Eimi.' },

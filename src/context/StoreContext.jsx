@@ -4,6 +4,7 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react'
+import { SHIPPING } from '../lib/format'
 
 const StoreContext = createContext(null)
 
@@ -94,7 +95,7 @@ export function StoreProvider({ children }) {
   const value = useMemo(() => {
     const count = cart.reduce((sum, line) => sum + line.qty, 0)
     const subtotal = cart.reduce((sum, line) => sum + line.qty * line.price, 0)
-    const shipping = subtotal === 0 || subtotal >= 50 ? 0 : 4.95
+    const shipping = subtotal === 0 || subtotal >= SHIPPING.freeOver ? 0 : SHIPPING.flatRate
     return {
       cart,
       count,
