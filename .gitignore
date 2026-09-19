@@ -10,9 +10,3 @@ dist
 
 # Design source PDFs — kept locally, not committed (45MB of binaries)
 design-reference/
-
-# Admin panel — kept local for now, not published yet.
-# App.jsx and adminAvailable.js glob for these, so the storefront builds
-# with or without them present.
-src/pages/admin/
-src/lib/adminApi.js

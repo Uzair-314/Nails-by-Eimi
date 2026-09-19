@@ -4,7 +4,7 @@ import Icon from './Icon'
 import { MENU_LINKS } from '../data/navigation'
 import { useStore } from '../context/StoreContext'
 import { useAuth } from '../context/AuthContext'
-import { ADMIN_AVAILABLE } from '../lib/adminAvailable'
+import { ADMIN_URL } from '../lib/adminLink'
 
 /** Database rows -> the nested shape the menus render. */
 export function useCategoryTree() {
@@ -46,13 +46,21 @@ export function MenuList({ onNavigate }) {
         </li>
       ))}
 
-      {/* Admins get a way into the panel; nobody else sees this row. */}
-      {isAdmin && ADMIN_AVAILABLE && (
+      {/* Admins get a way into the panel; nobody else sees this row. It is a
+          separate application, so this leaves the shop. */}
+      {isAdmin && ADMIN_URL && (
         <li>
-          <NavLink to="/admin" className={rowClass} onClick={onNavigate}>
+          <a
+            href={ADMIN_URL}
+            target="_blank"
+            rel="noreferrer"
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-xl px-3 py-3 text-[15px] text-ink
+                       transition duration-200 hover:bg-white hover:text-wine"
+          >
             <Icon name="settings" size={19} className="shrink-0 opacity-80" />
             <span>Admin panel</span>
-          </NavLink>
+          </a>
         </li>
       )}
     </ul>

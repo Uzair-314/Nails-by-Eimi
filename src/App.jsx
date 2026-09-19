@@ -1,4 +1,3 @@
-import { Suspense, lazy } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
@@ -22,18 +21,6 @@ import NailProfile from './pages/account/NailProfile'
 import RewardsLoyalty from './pages/account/RewardsLoyalty'
 import AccountSettings from './pages/account/AccountSettings'
 import { useAuth } from './context/AuthContext'
-
-/**
- * The admin panel is kept out of this repository for now.
- *
- * `import.meta.glob` resolves to an empty object when the folder is missing
- * rather than failing the build, so the storefront compiles either way. Where
- * the folder is present — a local working copy — the section is code-split and
- * loaded on demand.
- */
-const ADMIN_ENTRY = './pages/admin/index.jsx'
-const adminModules = import.meta.glob('./pages/admin/index.jsx')
-const AdminSection = adminModules[ADMIN_ENTRY] ? lazy(adminModules[ADMIN_ENTRY]) : null
 
 /** Sends signed-out visitors to the login screen, remembering where they were headed. */
 function RequireAuth({ children }) {
@@ -67,24 +54,6 @@ function NotFound() {
 export default function App() {
   return (
     <Routes>
-      {/* Admin sits outside the storefront shell — its own layout and guard. */}
-      {AdminSection && (
-        <Route
-          path="/admin/*"
-          element={
-            <Suspense
-              fallback={
-                <div className="grid min-h-screen place-items-center bg-canvas">
-                  <p className="text-sm text-muted">Loading the admin panel…</p>
-                </div>
-              }
-            >
-              <AdminSection />
-            </Suspense>
-          }
-        />
-      )}
-
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="new-arrivals" element={<NewArrivals />} />

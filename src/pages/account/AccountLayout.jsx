@@ -4,7 +4,7 @@ import useAsync from '../../hooks/useAsync'
 import { getUser } from '../../lib/api'
 import { useStore } from '../../context/StoreContext'
 import { useAuth } from '../../context/AuthContext'
-import { ADMIN_AVAILABLE } from '../../lib/adminAvailable'
+import { ADMIN_URL } from '../../lib/adminLink'
 
 const ACCOUNT_NAV = [
   { to: '/account', label: 'Dashboard', icon: 'home', end: true },
@@ -56,11 +56,11 @@ export default function AccountLayout() {
 
           <div className="flex items-center gap-2">
             {/* Only rendered for admins; the database blocks everyone else regardless. */}
-            {isAdmin && ADMIN_AVAILABLE && (
-              <Link to="/admin" className="btn-primary !py-2 text-[13px]">
+            {isAdmin && ADMIN_URL && (
+              <a href={ADMIN_URL} target="_blank" rel="noreferrer" className="btn-primary !py-2 text-[13px]">
                 <Icon name="settings" size={16} />
                 Admin panel
-              </Link>
+              </a>
             )}
 
             <button
