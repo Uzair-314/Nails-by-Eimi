@@ -1,94 +1,118 @@
 # Nails By Eimi
 
-Storefront for a press-on nail and nail-supply brand, built with React + Vite + Tailwind.
+Storefront for a press-on nail and nail-supply brand. React + Vite + Tailwind,
+with Supabase for data and accounts.
+
+The admin panel lives in a separate repository.
 
 ## Running it
 
 ```bash
 npm install
+cp .env.example .env    # fill in the two Supabase values
 npm run dev
 ```
 
-Then open http://localhost:5173. `npm run build` produces a static bundle in `dist/`.
+Opens on **http://localhost:5173**. `npm run build` produces a static bundle in
+`dist/`.
 
-## Design
+Without `.env` the app throws on start with a message saying what is missing —
+that is deliberate, so a missing key fails loudly rather than halfway through a
+checkout.
 
-Taken from the reference screens in `design-reference/`:
+## What it does
 
-| Token | Value | Used for |
-| --- | --- | --- |
-| `wine` | `#8B4550` | Primary actions, active nav, prices |
-| `blush` | `#FBF4F3` | Drawer and account rail backgrounds |
-| `canvas` | `#FDFAF9` | Page background (plus a soft blush wash) |
-| `ink` | `#3A2A2F` | Body text |
-| `muted` | `#8A7378` | Secondary text |
-| `rose` | `#B08A90` | Eyebrow labels |
-| `line` | `#F0E4E2` | Borders and dividers |
+Shop press-on sets, gel polishes, professional supplies and jewellery. Sign up,
+save a wishlist and delivery addresses, record a nail profile, place orders and
+earn loyalty points. Prices are in PKR and checkout is cash on delivery.
 
-**Type:** Cormorant Garamond for display (wordmark, headings) and Outfit for UI —
-an elegant serif against a clean geometric sans, which reads as premium beauty
-without losing the reference layout's clarity. Both load from Google Fonts in
-`index.html`.
+| Route | |
+| --- | --- |
+| `/` | Carousel, categories, shelves, loyalty banner |
+| `/new-arrivals`, `/gel-nails` | Catalogue views |
+| `/category/*` | Any category, including nested ones like `jewellery/rings` |
+| `/product/:slug` | One product |
+| `/search?q=` | Full-catalogue search |
+| `/contact` | Message form |
+| `/cart`, `/checkout` | Bag and checkout |
+| `/login` | Sign up, sign in, password reset |
+| `/account/*` | Dashboard, orders, history, wishlist, addresses, payment, nail profile, rewards, settings |
 
-Reusable classes (`.card`, `.btn-primary`, `.pill`, `.field`, `.eyebrow`) live in
-`src/index.css` so components stay consistent.
+## Architecture
+
+**`src/lib/api.js` is the only module that touches the database.** Components
+call it and nothing else, so the data layer can change without touching screens.
+
+**Row level security does the protecting, not the UI.** The catalogue and store
+settings are readable by anyone; orders, profiles, addresses, discounts and
+contact messages return nothing unless you own them or are an admin. Hiding a
+button is convenience — the database is the boundary.
+
+**Orders are placed by a database function**, not client code. `place_order`
+locks each product row, checks stock, writes the order and its lines, decrements
+stock and awards points in one transaction, so two people cannot buy the same
+last unit. Line items copy the name, price and image, so order history survives
+later edits to a product.
+
+**Categories and settings are rows, not constants.** The menu, footer, homepage
+rail, top bar, delivery threshold and minimum order all read from the database,
+which is what lets the admin panel change them without a deploy.
 
 ## Structure
 
 ```
 src/
-  components/   Header, SideDrawer, HeroCarousel, SearchOverlay, ProductCard, ui.jsx, Icon.jsx
+  components/   Header, Sidebar, SideDrawer, NavSections, HeroCarousel,
+                SearchOverlay, ProductCard, ProductListing, TopBar, Footer,
+                Icon (40 inline icons), ui.jsx
+  context/      AuthContext (session + profile), StoreContext (cart, wishlist,
+                toasts, settings, categories)
   pages/        Storefront routes
-  pages/account/ Signed-in dashboard (mirrors the reference screens)
-  context/      Cart, wishlist and toast state
-  data/         Navigation, slides, products, account seed data
-  lib/          api.js (data access) and format.js (currency/dates)
+  pages/account/ Signed-in area
+  lib/          api.js (all data access), supabase.js, format.js,
+                adminAvailable.js
   hooks/        useAsync
+  data/         navigation.js (Menu links), slides.js, site.js (fallbacks)
 ```
 
-### Navigation
+Product and category data used to live in `src/data/`; it now comes from
+Supabase. `data/navigation.js` still holds the fixed **Menu** links, since those
+are routes rather than content.
 
-`src/data/navigation.js` is the single source of truth for the drawer, the footer
-and the homepage category rail. It has two separated groups:
+## Design
 
-- **Menu** — Home, New Arrivals, Gel Nails, Contact Us, Rewards / Loyalty, Search, Account / Settings
-- **Categories** — Deals, Gel Polishes, Nail Supplies for Business, Nail Decoration, and
-  Jewellery, which expands in place to Bracelets / Rings / Watches
+| Token | Value | |
+| --- | --- | --- |
+| `wine` | `#E01B6A` | Primary actions, active nav, prices |
+| `ink` | `#1A0E14` | Text, top bar |
+| `canvas` | `#FFFBFC` | Page background |
+| `blush` | `#FFF1F6` | Drawer, sidebar, icon tiles |
+| `gold` | `#F5C24B` | Sale flags, loyalty tiers |
+| `muted` | `#7A6570` | Secondary text |
+| `line` | `#F6E3EB` | Borders |
 
-Adding a category with a `children` array automatically makes it expandable.
+Cormorant Garamond for display, Outfit for UI. Shared classes (`.card`,
+`.btn-primary`, `.pill`, `.field`, `.eyebrow`) are in `src/index.css`; colours
+come from `tailwind.config.js`, so a rebrand is one file.
 
-### Hero carousel
+## Admin panel
 
-`src/components/HeroCarousel.jsx` reads `src/data/slides.js` and renders at most
-three slides. It advances every 5s, pauses on hover, focus, drag and when the tab
-is hidden, and skips autoplay entirely under `prefers-reduced-motion`. Pointer
-events drive a real drag — the track follows your finger, locks to the horizontal
-axis so vertical page scrolling still works, and rubber-bands at the ends.
-
-Slide artwork is 16:9 and crops to `object-right` on phones (keeping the subject in
-frame) and `object-center` on wide screens (where the copy sits to its left).
-
-## Data layer
-
-Every screen reads and writes through `src/lib/api.js` — nothing imports the mock
-data directly except that file. Functions return promises with realistic latency
-and persist writes to `localStorage`, so the demo survives a refresh.
-
-**To move to Supabase:** rewrite the bodies in `src/lib/api.js` to call
-`supabase.from(...)` and keep the same return shapes. No component changes needed.
-
-Suggested tables: `products`, `categories`, `orders`, `order_items`, `addresses`,
-`payment_methods`, `nail_profiles`, `point_history`, `rewards`, `messages`.
+Kept in its own repository. `App.jsx` and `lib/adminAvailable.js` locate it with
+`import.meta.glob`, which resolves to nothing when the folder is absent — so
+this builds with or without it, and the admin link stays hidden unless the
+section is actually bundled.
 
 ## Images
 
-`public/media/*.svg` are generated placeholders — soft gradients with a stylised
-nail set. Replace them with photography and update the `image` fields in
-`src/data/products.js` and `src/data/slides.js`.
+`public/media/*.svg` are generated placeholders. Product photos uploaded through
+the admin panel go to Supabase Storage and replace them per product. To change
+the hero, edit `src/data/slides.js` — artwork should be 16:9 with the subject
+right of centre, or the mobile crop frames the wrong part.
 
 ## Not built yet
 
-- Authentication — the account area runs on a seeded demo user
-- Supabase backend
-- Admin panel
-- Real payments (checkout collects no card details by design)
+- Card payments (checkout is cash on delivery by design)
+- Order confirmation emails
+- Product reviews — ratings display, but nobody can write one
+- Real photography
+- Tests
