@@ -77,7 +77,7 @@ export function StoreProvider({ children }) {
 
   // Settings and categories are both editable in the admin panel, so the shop
   // reads them from the database rather than from a file in the bundle.
-  useEffect(() => {
+  const loadStoreData = useCallback(() => {
     getSettings()
       .then((s) => {
         setSettings(s)
@@ -87,12 +87,25 @@ export function StoreProvider({ children }) {
           minimumOrder: Number(s.minimum_order ?? DEFAULT_SHIPPING.minimumOrder),
         })
       })
-      .catch(() => { /* keep the defaults if the store is unreachable */ })
+      .catch(() => { /* keep whatever we have if the store is unreachable */ })
 
     listCategories()
       .then((rows) => setCategories(rows.filter((c) => c.is_active)))
-      .catch(() => setCategories([]))
+      .catch(() => { /* same */ })
   }, [])
+
+  // Re-read when the tab regains focus, so a category renamed or a delivery
+  // threshold changed in the admin shows up without a manual reload.
+  useEffect(() => {
+    loadStoreData()
+    const refresh = () => { if (!document.hidden) loadStoreData() }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [loadStoreData])
 
   const toast = useCallback((message) => {
     const id = Math.random().toString(36).slice(2)
