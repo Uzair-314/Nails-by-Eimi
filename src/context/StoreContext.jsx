@@ -1,14 +1,18 @@
 /**
  * Cart, wishlist and toast state.
  *
- * The cart stays in localStorage so people can shop before signing in. The
- * wishlist follows the account when there is one, and falls back to
- * localStorage for guests — anything saved as a guest is merged into the
- * account on the next sign-in.
+ * Both follow the account when there is one, so a bag filled on a phone is
+ * still there on a laptop. Guests use localStorage instead, and whatever they
+ * collected is merged in on their next sign-in — the larger quantity wins for
+ * anything in both, since summing would silently double an item added on two
+ * devices.
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react'
-import { addToWishlist, getSettings, listCategories, listWishlist, removeFromWishlist } from '../lib/api'
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import {
+  addToWishlist, getSettings, listCategories, listWishlist, mergeGuestCart,
+  removeFromWishlist, saveCart,
+} from '../lib/api'
 import { useAuth } from './AuthContext'
 
 const StoreContext = createContext(null)
@@ -54,6 +58,8 @@ function cartReducer(state, action) {
         .filter((line) => line.qty > 0)
     case 'remove':
       return state.filter((line) => line.id !== action.id)
+    case 'replace':
+      return action.lines
     case 'clear':
       return []
     default:
@@ -72,7 +78,35 @@ export function StoreProvider({ children }) {
   const [settings, setSettings] = useState({})
   const [categories, setCategories] = useState([])
 
-  useEffect(() => { save(CART_KEY, cart) }, [cart])
+  const hydrating = useRef(false)
+  const syncTimer = useRef(null)
+  const wasSignedIn = useRef(false)
+
+  // Empty the local bag when someone signs out. Their items are safe in the
+  // account; leaving a copy behind would show the next person on a shared
+  // device what was in it, and would then be merged into *their* account on
+  // the next sign-in.
+  useEffect(() => {
+    if (wasSignedIn.current && !isSignedIn) {
+      dispatch({ type: 'clear' })
+      setWishlist([])
+      save(CART_KEY, [])
+      save(WISH_KEY, [])
+    }
+    wasSignedIn.current = isSignedIn
+  }, [isSignedIn])
+
+  // Guests persist locally. Signed-in carts live in the database instead.
+  useEffect(() => { if (!isSignedIn) save(CART_KEY, cart) }, [cart, isSignedIn])
+
+  // Debounced write-through: the reducer stays the source of truth for the UI,
+  // and the server catches up a moment later.
+  useEffect(() => {
+    if (!isSignedIn || hydrating.current) return
+    clearTimeout(syncTimer.current)
+    syncTimer.current = setTimeout(() => { saveCart(cart).catch(() => {}) }, 500)
+    return () => clearTimeout(syncTimer.current)
+  }, [cart, isSignedIn])
   useEffect(() => { if (!isSignedIn) save(WISH_KEY, wishlist) }, [wishlist, isSignedIn])
 
   // Settings and categories are both editable in the admin panel, so the shop
@@ -119,15 +153,29 @@ export function StoreProvider({ children }) {
     if (!isSignedIn) return
 
     ;(async () => {
-      const pending = load(WISH_KEY, [])
-      for (const item of pending) {
+      hydrating.current = true
+
+      const pendingWishes = load(WISH_KEY, [])
+      for (const item of pendingWishes) {
         try { await addToWishlist(item.id) } catch { /* already saved */ }
       }
-      if (pending.length) save(WISH_KEY, [])
+      if (pendingWishes.length) save(WISH_KEY, [])
       try {
         const rows = await listWishlist()
         if (active) setWishlist(rows.map((p) => ({ id: p.id, slug: p.slug, name: p.name, price: p.price, image: p.image })))
       } catch { /* leave what we have */ }
+
+      // Fold the guest bag into the account, then adopt the account's bag.
+      try {
+        const merged = await mergeGuestCart(load(CART_KEY, []))
+        if (active) {
+          dispatch({ type: 'replace', lines: merged })
+          save(CART_KEY, [])
+        }
+      } catch { /* keep the local bag if the merge fails */ }
+
+      // Let the sync effect run again only once hydration has settled.
+      setTimeout(() => { hydrating.current = false }, 0)
     })()
 
     return () => { active = false }

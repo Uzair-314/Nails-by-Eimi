@@ -429,3 +429,70 @@ export async function listMyActivity() {
 
   return [...fromOrders, ...fromPoints].sort((a, b) => new Date(b.at) - new Date(a.at))
 }
+
+/* ------------------------------------------------------------------- cart */
+
+/**
+ * The signed-in cart. Only product ids and quantities are stored — name, price
+ * and image come from the product on load, so a bag left for a week reflects
+ * today's prices rather than a stale snapshot.
+ */
+export async function listCart() {
+  const { data, error } = await supabase
+    .from('cart_items')
+    .select(`qty, products(${PRODUCT_SELECT})`)
+  fail(error)
+
+  return (data ?? [])
+    .filter((row) => row.products?.is_active)
+    .map((row) => {
+      const p = toProduct(row.products)
+      return {
+        id: p.id, slug: p.slug, name: p.name, price: p.price,
+        image: p.image, stock: p.stock,
+        qty: Math.min(row.qty, p.stock || row.qty),
+      }
+    })
+}
+
+/** Replaces the stored cart with exactly these lines. */
+export async function saveCart(lines) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+
+  fail((await supabase.from('cart_items').delete().eq('user_id', user.id)).error)
+  if (!lines.length) return
+
+  fail((await supabase.from('cart_items').insert(
+    lines.map((l) => ({ user_id: user.id, product_id: l.id, qty: l.qty }))
+  )).error)
+}
+
+/**
+ * Folds a guest cart into the stored one on sign-in, keeping the larger
+ * quantity for anything in both. Summing would silently double an item someone
+ * added on two devices.
+ */
+export async function mergeGuestCart(guestLines) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return listCart()
+
+  if (guestLines.length) {
+    const { data: existing } = await supabase
+      .from('cart_items')
+      .select('product_id, qty')
+      .eq('user_id', user.id)
+
+    const merged = new Map((existing ?? []).map((r) => [r.product_id, r.qty]))
+    for (const line of guestLines) {
+      merged.set(line.id, Math.max(merged.get(line.id) ?? 0, line.qty))
+    }
+
+    fail((await supabase.from('cart_items').upsert(
+      [...merged].map(([product_id, qty]) => ({ user_id: user.id, product_id, qty })),
+      { onConflict: 'user_id,product_id' }
+    )).error)
+  }
+
+  return listCart()
+}
