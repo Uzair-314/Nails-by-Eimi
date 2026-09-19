@@ -16,9 +16,8 @@ npm run dev
 Opens on **http://localhost:5173**. `npm run build` produces a static bundle in
 `dist/`.
 
-Without `.env` the app throws on start with a message saying what is missing —
-that is deliberate, so a missing key fails loudly rather than halfway through a
-checkout.
+Without `.env` the app renders a setup screen naming the missing variables
+rather than a blank page. See **Deploying** below.
 
 ## What it does
 
@@ -108,6 +107,32 @@ section is actually bundled.
 the admin panel go to Supabase Storage and replace them per product. To change
 the hero, edit `src/data/slides.js` — artwork should be 16:9 with the subject
 right of centre, or the mobile crop frames the wrong part.
+
+## Deploying
+
+Host it anywhere that serves a static build. On Vercel the framework preset is
+detected automatically (`vite build` into `dist/`).
+
+**Two environment variables are required.** Set them on the host, applied to
+production, preview and development:
+
+| Name | |
+| --- | --- |
+| `VITE_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | The publishable key from the Supabase dashboard |
+
+Vite reads these **at build time**, not at run time, so saving them is not
+enough — the site has to be redeployed afterwards.
+
+If they are missing, the app renders a setup screen naming what is absent rather
+than failing silently. That screen exists because the earlier behaviour was to
+throw while modules were still loading, which left a blank page and the reason
+buried in the console.
+
+`vercel.json` rewrites every path to `index.html`. Without it, refreshing on a
+route like `/new-arrivals` returns a 404, because the host looks for a file
+there while routing actually happens client-side.
+
 
 ## Not built yet
 
