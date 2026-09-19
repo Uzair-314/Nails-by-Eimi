@@ -66,8 +66,12 @@ export async function listProducts({ category, search, sort = 'featured', tags, 
   if (!includeInactive) query = query.eq('is_active', true)
 
   if (search?.trim()) {
-    const q = search.trim()
-    query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+    // PostgREST parses `or=(...)` as a comma-separated list, so an unquoted
+    // comma in the term breaks the filter and the request 400s. Quoting the
+    // pattern makes the comma literal; the backslash escape protects any
+    // quote the visitor typed.
+    const pattern = `%${search.trim().replace(/["\\]/g, '\\$&')}%`
+    query = query.or(`name.ilike."${pattern}",description.ilike."${pattern}"`)
   }
   if (tags?.length) query = query.overlaps('tags', tags)
 
@@ -110,7 +114,11 @@ export async function getProduct(slug) {
 }
 
 export async function listRelated(product, limit = 4) {
-  const all = await listProducts({ category: product.category })
+  // An uncategorised product has nothing to be related to by category, so fall
+  // back to the featured ordering rather than listing the entire catalogue.
+  const all = product.category
+    ? await listProducts({ category: product.category })
+    : await listProducts({ limit: limit + 1 })
   return all.filter((p) => p.id !== product.id).slice(0, limit)
 }
 

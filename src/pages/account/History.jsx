@@ -29,7 +29,8 @@ function groupByDay(entries) {
 }
 
 export default function History() {
-  const { data, loading } = useAsync(listMyActivity, [])
+  const { data, loading, error } = useAsync(listMyActivity, [])
+  const entries = data ?? []
 
   return (
     <div>
@@ -44,7 +45,13 @@ export default function History() {
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-card" />)}
           </div>
-        ) : data.length === 0 ? (
+        ) : error ? (
+          <EmptyState
+            icon="info"
+            title="Could not load your history"
+            body="Something went wrong fetching it. Try again in a moment."
+          />
+        ) : entries.length === 0 ? (
           <EmptyState
             icon="clock"
             title="Nothing here yet"
@@ -53,7 +60,7 @@ export default function History() {
           />
         ) : (
           <div className="space-y-7">
-            {groupByDay(data).map((group) => (
+            {groupByDay(entries).map((group) => (
               <section key={group.day}>
                 <h2 className="text-[11px] font-medium uppercase tracking-[0.16em] text-rose">{group.day}</h2>
 

@@ -15,16 +15,19 @@ const PROMISES = [
 ]
 
 function Shelf({ eyebrow, title, to, query }) {
-  const { data, loading } = useAsync(() => listProducts(query), [JSON.stringify(query)])
+  const { data, loading, error } = useAsync(() => listProducts(query), [JSON.stringify(query)])
+  const items = data ?? []
 
   return (
     <section className="container-e mt-16">
       <SectionHeading eyebrow={eyebrow} title={title} to={to} />
       {loading ? (
         <ProductGridSkeleton count={4} />
+      ) : error ? (
+        <p className="card p-6 text-sm text-muted">Could not load these right now.</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-4">
-          {data.map((product) => <ProductCard key={product.id} product={product} />)}
+          {items.map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
       )}
       <Link to={to} className="btn-ghost mt-6 w-full sm:hidden">

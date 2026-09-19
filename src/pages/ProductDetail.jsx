@@ -5,13 +5,13 @@ import ProductCard from '../components/ProductCard'
 import { Badge, Rating, Skeleton } from '../components/ui'
 import useAsync from '../hooks/useAsync'
 import { getProduct, listRelated } from '../lib/api'
-import { formatPrice, pointsFor } from '../lib/format'
+import { formatPrice } from '../lib/format'
 import { useStore } from '../context/StoreContext'
 
 export default function ProductDetail() {
   const { slug } = useParams()
   const { data: product, loading } = useAsync(() => getProduct(slug), [slug])
-  const { addToCart, toggleWishlist, inWishlist } = useStore()
+  const { addToCart, toggleWishlist, inWishlist, settings, shippingRules } = useStore()
   const [qty, setQty] = useState(1)
 
   const { data: related } = useAsync(
@@ -45,6 +45,7 @@ export default function ProductDetail() {
   }
 
   const saved = inWishlist(product.id)
+  const earned = Math.round(product.price * Number(settings.points_per_unit ?? 0.02))
   const soldOut = product.stock === 0
   const lowStock = !soldOut && product.stock <= 10
 
@@ -147,9 +148,9 @@ export default function ProductDetail() {
 
           <div className="card mt-8 divide-y divide-line p-0">
             {[
-              { icon: 'truck', title: 'Free delivery over Rs 5,000', body: 'Dispatched next working day from the studio.' },
+              { icon: 'truck', title: `Free delivery over ${formatPrice(shippingRules.freeOver)}`, body: 'Dispatched next working day.' },
               { icon: 'shield', title: '30-day returns', body: 'Unopened sets, prepaid label in every box.' },
-              { icon: 'gift', title: `Earn ${pointsFor(product.price)} points`, body: 'Redeemable against any future order.' },
+              { icon: 'gift', title: `Earn ${earned} ${earned === 1 ? 'point' : 'points'}`, body: 'Redeemable against any future order.' },
             ].map((row) => (
               <div key={row.title} className="flex items-start gap-3.5 p-4">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-blush text-wine">
