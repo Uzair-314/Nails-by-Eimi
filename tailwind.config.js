@@ -4,25 +4,32 @@ export default {
   theme: {
     extend: {
       colors: {
+        /* `wine` is the brand ramp. The name is kept so every component that
+           already references it recolours from this one place. */
         wine: {
-          DEFAULT: '#8B4550',
-          50: '#FBF3F3',
-          100: '#F6E6E7',
-          200: '#EBCBCE',
-          300: '#DBA5AB',
-          400: '#C07B85',
-          500: '#A15A66',
-          600: '#8B4550',
-          700: '#743A43',
-          800: '#5C2F36',
-          900: '#422227',
+          DEFAULT: '#E01B6A',
+          50: '#FFF1F6',
+          100: '#FFD9E7',
+          200: '#FFB3CF',
+          300: '#FF80AF',
+          400: '#F94D8E',
+          500: '#E01B6A',
+          600: '#C4135A',
+          700: '#A00E49',
+          800: '#7A0A38',
+          900: '#4F0624',
         },
-        blush: '#FBF4F3',
-        canvas: '#FDFAF9',
-        ink: '#3A2A2F',
-        muted: '#8A7378',
-        rose: '#B08A90',
-        line: '#F0E4E2',
+        gold: {
+          DEFAULT: '#F5C24B',
+          soft: '#FDF1D6',
+          deep: '#B98A18',
+        },
+        blush: '#FFF1F6',
+        canvas: '#FFFBFC',
+        ink: '#1A0E14',
+        muted: '#7A6570',
+        rose: '#C4478A',
+        line: '#F6E3EB',
       },
       fontFamily: {
         display: ['"Cormorant Garamond"', 'Georgia', 'serif'],
@@ -30,9 +37,10 @@ export default {
       },
       borderRadius: { card: '16px' },
       boxShadow: {
-        card: '0 1px 2px rgba(58,42,47,0.04), 0 8px 24px -16px rgba(58,42,47,0.18)',
-        lift: '0 12px 40px -18px rgba(58,42,47,0.32)',
-        drawer: '0 0 60px rgba(58,42,47,0.22)',
+        card: '0 1px 2px rgba(26,14,20,0.04), 0 8px 24px -16px rgba(26,14,20,0.16)',
+        lift: '0 12px 40px -18px rgba(26,14,20,0.28)',
+        drawer: '0 0 60px rgba(26,14,20,0.24)',
+        glow: '0 8px 28px -12px rgba(224,27,106,0.45)',
       },
       keyframes: {
         'fade-up': { '0%': { opacity: 0, transform: 'translateY(8px)' }, '100%': { opacity: 1, transform: 'none' } },

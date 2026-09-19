@@ -6,7 +6,7 @@ import { useStore } from '../../context/StoreContext'
 
 const BRAND_TINT = {
   Visa: 'from-[#2A3B7D] to-[#4457A8]',
-  Mastercard: 'from-[#7A3A45] to-[#B2646E]',
+  Mastercard: 'from-[#A00E49] to-[#F94D8E]',
   Amex: 'from-[#2E6A7A] to-[#4E97A8]',
 }
 

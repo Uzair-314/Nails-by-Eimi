@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import TopBar from './TopBar'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import SideDrawer from './SideDrawer'
@@ -20,7 +21,7 @@ export default function Layout() {
   const closeSearch = useCallback(() => setSearchOpen(false), [])
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-lg
@@ -29,18 +30,23 @@ export default function Layout() {
         Skip to content
       </a>
 
-      {/* Always on screen from lg up; below that the drawer takes over. */}
-      <Sidebar />
-      <SideDrawer open={menuOpen} onClose={closeMenu} />
+      {/* Spans the full width, above the sidebar as well as the content. */}
+      <TopBar />
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Header onOpenMenu={() => setMenuOpen(true)} onOpenSearch={() => setSearchOpen(true)} />
+      <div className="flex min-w-0 flex-1">
+        {/* Always on screen from lg up; below that the drawer takes over. */}
+        <Sidebar />
+        <SideDrawer open={menuOpen} onClose={closeMenu} />
 
-        <main id="main" className="flex-1">
-          <Outlet />
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Header onOpenMenu={() => setMenuOpen(true)} onOpenSearch={() => setSearchOpen(true)} />
 
-        <Footer />
+          <main id="main" className="flex-1">
+            <Outlet />
+          </main>
+
+          <Footer />
+        </div>
       </div>
 
       <SearchOverlay open={searchOpen} onClose={closeSearch} />

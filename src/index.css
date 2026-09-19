@@ -17,16 +17,17 @@
     overflow-x: hidden;
   }
 
-  /* Soft blush wash behind the whole storefront, mirroring the reference art direction. */
+  /* Fuchsia wash behind the storefront — enough tint to lift the page off white
+     without competing with product imagery. */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
     z-index: -1;
     background:
-      radial-gradient(900px 500px at 12% -5%, #FCEFEE 0%, transparent 60%),
-      radial-gradient(700px 480px at 92% 8%, #FBF2F5 0%, transparent 62%),
-      #FDFAF9;
+      radial-gradient(900px 520px at 10% -6%, #FFE2EE 0%, transparent 62%),
+      radial-gradient(760px 500px at 94% 6%, #FFEFD9 0%, transparent 64%),
+      #FFFBFC;
   }
 
   ::selection {
@@ -60,7 +61,9 @@
            duration-200 disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply btn bg-wine text-white hover:bg-wine-700 active:scale-[.985];
+    @apply btn bg-wine text-white hover:bg-wine-600 active:scale-[.985];
+    /* Raw value rather than @apply, so the class does not depend on theme lookup order. */
+    box-shadow: 0 8px 28px -12px rgba(224, 27, 106, 0.45);
   }
   .btn-ghost {
     @apply btn border border-line bg-white text-ink hover:border-wine-200 hover:bg-wine-50;

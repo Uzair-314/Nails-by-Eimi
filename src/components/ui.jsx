@@ -49,9 +49,9 @@ export function Rating({ value, count, size = 13 }) {
 const BADGE_TONES = {
   default: 'bg-blush text-wine',
   rose: 'bg-wine-100 text-wine-700',
-  lilac: 'bg-[#EFE9FA] text-[#6B5B9A]',
-  sage: 'bg-[#EDF1EA] text-[#6B7A5C]',
-  amber: 'bg-[#FBF0DC] text-[#9A7326]',
+  lilac: 'bg-[#EDE7FB] text-[#5B47A8]',
+  sage: 'bg-[#E4F3EC] text-[#2F7256]',
+  amber: 'bg-gold-soft text-gold-deep',
   neutral: 'bg-line/70 text-muted',
 }
 

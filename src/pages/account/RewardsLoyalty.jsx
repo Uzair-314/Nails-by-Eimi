@@ -16,10 +16,10 @@ function ProgressRing({ value, max, size = 132, stroke = 11 }) {
 
   return (
     <svg width={size} height={size} role="img" aria-label={`${Math.round(pct * 100)} percent to the next tier`}>
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#F0E4E2" strokeWidth={stroke} />
+      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#F6E3EB" strokeWidth={stroke} />
       <circle
         cx={size / 2} cy={size / 2} r={radius}
-        fill="none" stroke="#8B4550" strokeWidth={stroke} strokeLinecap="round"
+        fill="none" stroke="#E01B6A" strokeWidth={stroke} strokeLinecap="round"
         strokeDasharray={circumference}
         strokeDashoffset={circumference * (1 - pct)}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
@@ -28,7 +28,7 @@ function ProgressRing({ value, max, size = 132, stroke = 11 }) {
       <text x="50%" y="47%" textAnchor="middle" className="fill-ink font-display" fontSize="24" fontWeight="600">
         {Math.round(pct * 100)}%
       </text>
-      <text x="50%" y="63%" textAnchor="middle" className="fill-[#8A7378]" fontSize="11">to next tier</text>
+      <text x="50%" y="63%" textAnchor="middle" className="fill-[#7A6570]" fontSize="11">to next tier</text>
     </svg>
   )
 }

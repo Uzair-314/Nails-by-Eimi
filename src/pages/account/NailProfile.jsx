@@ -102,7 +102,7 @@ export default function NailProfile() {
                     step={1}
                     value={profile.sizes[finger.key]}
                     onChange={(e) => setSize(finger.key, e.target.value)}
-                    className="w-full accent-[#8B4550]"
+                    className="w-full accent-[#E01B6A]"
                   />
                 </label>
               ))}

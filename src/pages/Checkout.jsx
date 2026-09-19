@@ -77,7 +77,7 @@ export default function Checkout() {
                     name="address"
                     checked={selectedAddress === address.id}
                     onChange={() => setAddressId(address.id)}
-                    className="mt-1 accent-[#8B4550]"
+                    className="mt-1 accent-[#E01B6A]"
                   />
                   <span className="text-[14px] leading-relaxed">
                     <span className="flex items-center gap-2 font-medium text-ink">
@@ -114,7 +114,7 @@ export default function Checkout() {
                     name="card"
                     checked={selectedCard === card.id}
                     onChange={() => setCardId(card.id)}
-                    className="accent-[#8B4550]"
+                    className="accent-[#E01B6A]"
                   />
                   <Icon name="card" size={20} className="text-wine" />
                   <span className="flex-1 text-[14px]">

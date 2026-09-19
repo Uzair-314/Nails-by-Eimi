@@ -37,7 +37,7 @@ export default function AccountLayout() {
           <div className="flex items-center gap-3">
             <span
               className="grid h-10 w-10 shrink-0 place-items-center rounded-xl font-display text-[15px] font-semibold text-white"
-              style={{ background: user?.avatarTone ?? '#E7AFC0' }}
+              style={{ background: user?.avatarTone ?? '#F94D8E' }}
             >
               {(user?.firstName?.[0] ?? 'A') + (user?.lastName?.[0] ?? '')}
             </span>

@@ -103,7 +103,7 @@ export default function SavedAddresses() {
           </div>
 
           <label className="mt-5 flex items-center gap-2.5 text-[14px] text-ink">
-            <input type="checkbox" checked={form.isDefault} onChange={update('isDefault')} className="h-4 w-4 accent-[#8B4550]" />
+            <input type="checkbox" checked={form.isDefault} onChange={update('isDefault')} className="h-4 w-4 accent-[#E01B6A]" />
             Use as my default delivery address
           </label>
 

@@ -11,7 +11,7 @@ export const SEED_USER = {
   points: 2480,
   pointsToNextTier: 520,
   nextTier: 'Platinum',
-  avatarTone: '#E7AFC0',
+  avatarTone: '#F94D8E',
 }
 
 export const SEED_ORDERS = [
