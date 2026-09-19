@@ -22,6 +22,16 @@ function toProduct(row) {
   const price = Number(row.price)
   const compareAt = row.compare_at == null ? null : Number(row.compare_at)
 
+  // A product can sit on several shelves. Its home — what the breadcrumb and the
+  // eyebrow show — is the first real category, skipping promotional shelves like
+  // Deals, which describe why a product is there rather than what it is.
+  const categories = (row.product_categories ?? [])
+    .map((pc) => pc.categories)
+    .filter(Boolean)
+    .sort((a, b) => a.sort_order - b.sort_order)
+
+  const primary = categories.find((c) => !c.is_promotional) ?? categories[0] ?? null
+
   return {
     id: row.id,
     slug: row.slug,
@@ -36,9 +46,10 @@ function toProduct(row) {
     isAvailable: row.is_available,
     isActive: row.is_active,
     isFeatured: row.is_featured,
-    category: row.categories?.slug ?? null,
-    categoryId: row.category_id,
-    categoryName: row.categories?.name ?? null,
+    categories,
+    categorySlugs: categories.map((c) => c.slug),
+    category: primary?.slug ?? null,
+    categoryName: primary?.name ?? null,
     tags: row.tags ?? [],
     rating: Number(row.rating),
     reviews: row.reviews_count,
@@ -48,7 +59,8 @@ function toProduct(row) {
   }
 }
 
-const PRODUCT_SELECT = '*, categories(slug, name), product_images(url, alt, sort_order)'
+const PRODUCT_SELECT =
+  '*, product_categories(categories(slug, name, sort_order, is_promotional)), product_images(url, alt, sort_order)'
 
 /* -------------------------------------------------------------- catalogue */
 
@@ -84,8 +96,10 @@ export async function listProducts({ category, search, sort = 'featured', tags, 
   // belongs to its parent category and, when discounted, to the Deals shelf.
   if (category) {
     items = items.filter((p) => {
-      if (p.category === category) return true
-      if (p.category?.includes('/') && p.category.split('/')[0] === category) return true
+      // Any shelf the product sits on, or the parent of one of them.
+      if (p.categorySlugs.includes(category)) return true
+      if (p.categorySlugs.some((s) => s.includes('/') && s.split('/')[0] === category)) return true
+      // Discounted products join Deals whether or not anyone ticked it.
       if (category === 'deals' && (p.onSale || p.tags.includes('deal'))) return true
       return false
     })

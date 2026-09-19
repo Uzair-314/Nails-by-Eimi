@@ -57,6 +57,11 @@ later edits to a product.
 rail, top bar, delivery threshold and minimum order all read from the database,
 which is what lets the admin panel change them without a deploy.
 
+**A product belongs to any number of categories**, through the
+`product_categories` join table. Its home for breadcrumb purposes is the first
+by menu order that is not flagged promotional — so Deals, which collects
+discounted products, never claims to be where a product lives.
+
 ## Structure
 
 ```
