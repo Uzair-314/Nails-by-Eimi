@@ -436,6 +436,10 @@ export async function listMyActivity() {
  * The signed-in cart. Only product ids and quantities are stored — name, price
  * and image come from the product on load, so a bag left for a week reflects
  * today's prices rather than a stale snapshot.
+ *
+ * Lines whose product has since been hidden or sold out are dropped: they could
+ * not be ordered anyway, and a line with zero stock makes the quantity stepper
+ * behave strangely.
  */
 export async function listCart() {
   const { data, error } = await supabase
@@ -444,28 +448,38 @@ export async function listCart() {
   fail(error)
 
   return (data ?? [])
-    .filter((row) => row.products?.is_active)
+    .filter((row) => row.products?.is_active && row.products?.is_available && row.products?.stock > 0)
     .map((row) => {
       const p = toProduct(row.products)
       return {
         id: p.id, slug: p.slug, name: p.name, price: p.price,
         image: p.image, stock: p.stock,
-        qty: Math.min(row.qty, p.stock || row.qty),
+        qty: Math.max(1, Math.min(row.qty, p.stock)),
       }
     })
 }
 
-/** Replaces the stored cart with exactly these lines. */
+/**
+ * Makes the stored cart match these lines.
+ *
+ * Upserts first and only then removes what is no longer in the bag. Deleting
+ * first would empty someone's cart if the insert then failed — a product
+ * deleted in the admin while the bag was open is enough to cause that.
+ */
 export async function saveCart(lines) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return
 
-  fail((await supabase.from('cart_items').delete().eq('user_id', user.id)).error)
-  if (!lines.length) return
+  if (lines.length) {
+    fail((await supabase.from('cart_items').upsert(
+      lines.map((l) => ({ user_id: user.id, product_id: l.id, qty: l.qty, updated_at: new Date().toISOString() })),
+      { onConflict: 'user_id,product_id' }
+    )).error)
+  }
 
-  fail((await supabase.from('cart_items').insert(
-    lines.map((l) => ({ user_id: user.id, product_id: l.id, qty: l.qty }))
-  )).error)
+  let remove = supabase.from('cart_items').delete().eq('user_id', user.id)
+  if (lines.length) remove = remove.not('product_id', 'in', `(${lines.map((l) => l.id).join(',')})`)
+  fail((await remove).error)
 }
 
 /**
@@ -475,16 +489,28 @@ export async function saveCart(lines) {
  */
 export async function mergeGuestCart(guestLines) {
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return listCart()
+  if (!user) return []
 
+  // A guest bag can outlive the products in it. One missing id would fail the
+  // whole insert on the foreign key, so drop them before writing.
+  let valid = []
   if (guestLines.length) {
+    const { data: live } = await supabase
+      .from('products')
+      .select('id')
+      .in('id', guestLines.map((l) => l.id))
+    const liveIds = new Set((live ?? []).map((r) => r.id))
+    valid = guestLines.filter((l) => liveIds.has(l.id))
+  }
+
+  if (valid.length) {
     const { data: existing } = await supabase
       .from('cart_items')
       .select('product_id, qty')
       .eq('user_id', user.id)
 
     const merged = new Map((existing ?? []).map((r) => [r.product_id, r.qty]))
-    for (const line of guestLines) {
+    for (const line of valid) {
       merged.set(line.id, Math.max(merged.get(line.id) ?? 0, line.qty))
     }
 

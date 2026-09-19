@@ -93,6 +93,14 @@ export function StoreProvider({ children }) {
       save(CART_KEY, [])
       save(WISH_KEY, [])
     }
+
+    // Signing in: block write-back until the account's bag has been fetched.
+    // This effect is declared before the sync effect, so the flag is set before
+    // sync gets a chance to run. Without it, sync would push the *guest* bag up
+    // first, and saveCart removes anything not in what it is given — quietly
+    // emptying a bag filled on another device.
+    if (!wasSignedIn.current && isSignedIn) hydrating.current = true
+
     wasSignedIn.current = isSignedIn
   }, [isSignedIn])
 
@@ -153,8 +161,6 @@ export function StoreProvider({ children }) {
     if (!isSignedIn) return
 
     ;(async () => {
-      hydrating.current = true
-
       const pendingWishes = load(WISH_KEY, [])
       for (const item of pendingWishes) {
         try { await addToWishlist(item.id) } catch { /* already saved */ }
