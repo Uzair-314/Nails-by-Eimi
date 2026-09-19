@@ -1,8 +1,18 @@
 import { Link } from 'react-router-dom'
 import Icon from './Icon'
-import { CATEGORY_LINKS, MENU_LINKS } from '../data/navigation'
+import { MENU_LINKS } from '../data/navigation'
+import { useCategoryTree } from './NavSections'
+import { SITE } from '../data/site'
+import { useStore } from '../context/StoreContext'
+import { formatPrice } from '../lib/format'
 
 export default function Footer() {
+  const categories = useCategoryTree()
+  const { settings, shippingRules } = useStore()
+
+  const whatsapp = settings.contact_whatsapp ?? SITE.whatsapp
+  const email = settings.contact_email ?? SITE.email
+
   return (
     <footer className="mt-20 border-t border-line bg-blush/60">
       <div className="container-e py-14">
@@ -39,10 +49,10 @@ export default function Footer() {
           <nav aria-label="Categories">
             <h2 className="text-[10px] font-medium uppercase tracking-[0.22em] text-rose">Categories</h2>
             <ul className="mt-4 space-y-2.5">
-              {CATEGORY_LINKS.map((cat) => (
+              {categories.map((cat) => (
                 <li key={cat.slug}>
                   <Link to={`/category/${cat.slug}`} className="text-sm text-muted transition hover:text-wine">
-                    {cat.label}
+                    {cat.name}
                   </Link>
                 </li>
               ))}
@@ -50,19 +60,24 @@ export default function Footer() {
           </nav>
 
           <div>
-            <h2 className="text-[10px] font-medium uppercase tracking-[0.22em] text-rose">Studio</h2>
+            <h2 className="text-[10px] font-medium uppercase tracking-[0.22em] text-rose">Contact</h2>
             <ul className="mt-4 space-y-3 text-sm text-muted">
-              <li className="flex items-start gap-2.5">
-                <Icon name="pin" size={16} className="mt-0.5 shrink-0" />
-                Unit 9, Peckham Levels, London SE15
+              <li>
+                <a
+                  href={`https://wa.me/${String(whatsapp).replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-start gap-2.5 transition hover:text-wine"
+                >
+                  <Icon name="phone" size={16} className="mt-0.5 shrink-0" />
+                  {whatsapp}
+                </a>
               </li>
-              <li className="flex items-start gap-2.5">
-                <Icon name="mail" size={16} className="mt-0.5 shrink-0" />
-                hello@nailsbyeimi.com
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Icon name="clock" size={16} className="mt-0.5 shrink-0" />
-                Tue–Sat, 10:00–18:00
+              <li>
+                <a href={`mailto:${email}`} className="flex items-start gap-2.5 transition hover:text-wine">
+                  <Icon name="mail" size={16} className="mt-0.5 shrink-0" />
+                  {email}
+                </a>
               </li>
             </ul>
           </div>
@@ -70,7 +85,7 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-line pt-6 sm:flex-row">
           <p className="text-[12px] text-muted">© {new Date().getFullYear()} Nails By Eimi. All rights reserved.</p>
-          <p className="text-[12px] text-muted">Free delivery over Rs 5,000 · 30-day returns</p>
+          <p className="text-[12px] text-muted">{`Free delivery over ${formatPrice(shippingRules.freeOver)}`} · 30-day returns</p>
         </div>
       </div>
     </footer>

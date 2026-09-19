@@ -3,18 +3,22 @@ import Icon from '../components/Icon'
 import { PageHeading } from '../components/ui'
 import { sendContactMessage } from '../lib/api'
 import { useStore } from '../context/StoreContext'
+import { SITE } from '../data/site'
 
 const TOPICS = ['An order', 'Sizing and fit', 'Trade / wholesale', 'Press and collabs', 'Something else']
 
-const DETAILS = [
-  { icon: 'pin', title: 'Studio', body: 'Unit 9, Peckham Levels\n95a Rye Lane, London SE15 4ST' },
-  { icon: 'mail', title: 'Email', body: 'hello@nailsbyeimi.com\nTrade: wholesale@nailsbyeimi.com' },
-  { icon: 'phone', title: 'Phone', body: '+44 20 7946 0813\nTue–Sat, 10:00–18:00' },
-  { icon: 'clock', title: 'Response time', body: 'Within one working day.\nOrder issues are prioritised.' },
-]
+/* No walk-in shop — contact is phone and email, both editable in the admin panel. */
 
 export default function Contact() {
-  const { toast } = useStore()
+  const { toast, settings } = useStore()
+
+  const whatsapp = settings.contact_whatsapp ?? SITE.whatsapp
+  const email = settings.contact_email ?? SITE.email
+  const details = [
+    { icon: 'phone', title: 'WhatsApp', body: whatsapp, href: `https://wa.me/${String(whatsapp).replace(/\D/g, '')}` },
+    { icon: 'mail', title: 'Email', body: email, href: `mailto:${email}` },
+    { icon: 'clock', title: 'Response time', body: 'Within one working day. Order issues are prioritised.' },
+  ]
   const [form, setForm] = useState({ name: '', email: '', topic: TOPICS[0], message: '' })
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
@@ -41,7 +45,7 @@ export default function Contact() {
       <PageHeading
         eyebrow="Say hello"
         title="Contact Us"
-        subtitle="Questions about an order, sizing or trade pricing — this reaches the studio directly."
+        subtitle="Questions about an order, sizing or trade pricing — this reaches us directly."
       />
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[1fr_380px]">
@@ -50,7 +54,7 @@ export default function Contact() {
             <div className="mb-6 flex items-start gap-3 rounded-xl bg-wine-50 p-4">
               <Icon name="check" size={18} className="mt-0.5 shrink-0 text-wine" />
               <p className="text-[14px] leading-relaxed text-ink">
-                Thanks — your message is with the studio. Expect a reply within one working day.
+                Thanks — we have got your message. Expect a reply within one working day.
               </p>
             </div>
           )}
@@ -102,26 +106,39 @@ export default function Contact() {
         </form>
 
         <div className="space-y-4">
-          {DETAILS.map((item) => (
-            <div key={item.title} className="card flex gap-4 p-5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blush text-wine">
-                <Icon name={item.icon} size={18} />
-              </span>
-              <div>
-                <h2 className="text-[14px] font-medium text-ink">{item.title}</h2>
-                <p className="mt-1 whitespace-pre-line text-[13px] leading-relaxed text-muted">{item.body}</p>
-              </div>
-            </div>
-          ))}
+          {details.map((item) => {
+            const inner = (
+              <>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-blush text-wine">
+                  <Icon name={item.icon} size={18} />
+                </span>
+                <div>
+                  <h2 className="text-[14px] font-medium text-ink">{item.title}</h2>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted">{item.body}</p>
+                </div>
+              </>
+            )
+            return item.href ? (
+              <a
+                key={item.title}
+                href={item.href}
+                target={item.href.startsWith('http') ? '_blank' : undefined}
+                rel="noreferrer"
+                className="card flex gap-4 p-5 transition hover:shadow-lift"
+              >
+                {inner}
+              </a>
+            ) : (
+              <div key={item.title} className="card flex gap-4 p-5">{inner}</div>
+            )
+          })}
 
-          <div className="card overflow-hidden p-0">
-            <img src="/media/slide-2.svg" alt="The Nails By Eimi studio" className="h-40 w-full object-cover" />
-            <div className="p-5">
-              <h2 className="text-[14px] font-medium text-ink">Visit by appointment</h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted">
-                Bespoke fittings and trade pickups run Tuesday to Saturday. Email to book a slot.
-              </p>
-            </div>
+          <div className="card p-5">
+            <h2 className="text-[14px] font-medium text-ink">Online only</h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted">
+              We ship across Pakistan from our workroom. There is no walk-in shop, so message us and we will sort
+              anything you need from there.
+            </p>
           </div>
         </div>
       </div>

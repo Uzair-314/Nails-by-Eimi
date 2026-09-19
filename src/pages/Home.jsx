@@ -5,7 +5,7 @@ import Icon from '../components/Icon'
 import { ProductGridSkeleton, SectionHeading } from '../components/ui'
 import { listProducts } from '../lib/api'
 import useAsync from '../hooks/useAsync'
-import { CATEGORY_LINKS } from '../data/navigation'
+import { useCategoryTree } from '../components/NavSections'
 
 const PROMISES = [
   { icon: 'truck', title: 'Free delivery', body: 'On every order over Rs 5,000, dispatched next working day.' },
@@ -36,6 +36,8 @@ function Shelf({ eyebrow, title, to, query }) {
 }
 
 export default function Home() {
+  const categories = useCategoryTree()
+
   return (
     <div className="pb-4 pt-6">
       <HeroCarousel />
@@ -44,7 +46,7 @@ export default function Home() {
       <section className="container-e mt-12">
         <SectionHeading eyebrow="Shop by" title="Categories" />
         <div className="rail sm:grid sm:grid-cols-5 sm:gap-5">
-          {CATEGORY_LINKS.map((cat) => (
+          {categories.map((cat) => (
             <Link
               key={cat.slug}
               to={`/category/${cat.slug}`}
@@ -54,7 +56,7 @@ export default function Home() {
               <span className="grid h-14 w-14 place-items-center rounded-full bg-blush text-wine transition group-hover:bg-wine group-hover:text-white">
                 <Icon name={cat.icon} size={24} />
               </span>
-              <span className="text-[13px] font-medium leading-snug text-ink">{cat.label}</span>
+              <span className="text-[13px] font-medium leading-snug text-ink">{cat.name}</span>
             </Link>
           ))}
         </div>

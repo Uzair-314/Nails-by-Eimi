@@ -7,7 +7,6 @@ import useAsync from '../hooks/useAsync'
 import { getProduct, listRelated } from '../lib/api'
 import { formatPrice, pointsFor } from '../lib/format'
 import { useStore } from '../context/StoreContext'
-import { CATEGORY_NAMES } from '../data/navigation'
 
 export default function ProductDetail() {
   const { slug } = useParams()
@@ -56,7 +55,7 @@ export default function ProductDetail() {
           <Link to="/" className="transition hover:text-wine">Home</Link>
           <Icon name="chevronRight" size={13} />
           <Link to={`/category/${product.category}`} className="transition hover:text-wine">
-            {CATEGORY_NAMES[product.category] ?? 'Shop'}
+            {product.categoryName ?? 'Shop'}
           </Link>
           <Icon name="chevronRight" size={13} />
           <span className="truncate text-ink">{product.name}</span>
@@ -73,7 +72,7 @@ export default function ProductDetail() {
         </div>
 
         <div>
-          <p className="eyebrow">{CATEGORY_NAMES[product.category]}</p>
+          <p className="eyebrow">{product.categoryName ?? 'Shop'}</p>
           <h1 className="mt-3 font-display text-[32px] font-semibold leading-tight text-ink sm:text-[40px]">
             {product.name}
           </h1>

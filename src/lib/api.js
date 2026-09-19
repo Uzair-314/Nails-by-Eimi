@@ -1,59 +1,90 @@
 /**
- * Data access layer.
+ * Data access layer, backed by Supabase.
  *
- * Every screen talks to the app through these functions and nothing else, so the
- * Supabase migration is a rewrite of this file alone: swap the local store for
- * `supabase.from('products').select()` etc. and keep the same return shapes.
- *
- * Writes persist to localStorage so the demo survives a refresh.
+ * Every screen talks to the app through these functions and nothing else. The
+ * shapes they return are the same ones the storefront used when this was mock
+ * data, so components did not have to change when the database arrived.
  */
 
-import { PRODUCTS, categoriesFor } from '../data/products'
-import { pointsFor } from './format'
-import {
-  SEED_ADDRESSES, SEED_CARDS, SEED_NAIL_PROFILE, SEED_ORDERS, SEED_POINT_HISTORY, SEED_USER,
-} from '../data/account'
+import { supabase } from './supabase'
 
-const LATENCY = 220
-const delay = (value) => new Promise((resolve) => setTimeout(() => resolve(value), LATENCY))
+const fail = (error) => { if (error) throw error }
 
-const KEY = (name) => `nbe:${name}`
+/* ---------------------------------------------------------------- mapping */
 
-function read(name, fallback) {
-  try {
-    const raw = localStorage.getItem(KEY(name))
-    return raw ? JSON.parse(raw) : fallback
-  } catch {
-    return fallback
+/** Database row -> the product shape the UI expects. */
+function toProduct(row) {
+  const images = (row.product_images ?? [])
+    .slice()
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((i) => i.url)
+
+  const price = Number(row.price)
+  const compareAt = row.compare_at == null ? null : Number(row.compare_at)
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description,
+    details: row.details ?? [],
+    price,
+    compareAt,
+    onSale: compareAt != null && compareAt > price,
+    stock: row.is_available ? row.stock : 0,
+    rawStock: row.stock,
+    isAvailable: row.is_available,
+    isActive: row.is_active,
+    isFeatured: row.is_featured,
+    category: row.categories?.slug ?? null,
+    categoryId: row.category_id,
+    categoryName: row.categories?.name ?? null,
+    tags: row.tags ?? [],
+    rating: Number(row.rating),
+    reviews: row.reviews_count,
+    createdAt: row.created_at,
+    image: images[0] ?? '/media/p-pearl.svg',
+    images: images.length ? images : ['/media/p-pearl.svg'],
   }
 }
 
-function write(name, value) {
-  try {
-    localStorage.setItem(KEY(name), JSON.stringify(value))
-  } catch {
-    /* Private mode or a full quota — the in-memory value still works for this session. */
-  }
-  return value
+const PRODUCT_SELECT = '*, categories(slug, name), product_images(url, alt, sort_order)'
+
+/* -------------------------------------------------------------- catalogue */
+
+export async function listCategories() {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('sort_order')
+  fail(error)
+  return data
 }
 
-const uid = (prefix) => `${prefix}_${Math.random().toString(36).slice(2, 9)}`
+export async function listProducts({ category, search, sort = 'featured', tags, limit, includeInactive } = {}) {
+  let query = supabase.from('products').select(PRODUCT_SELECT)
+  if (!includeInactive) query = query.eq('is_active', true)
 
-/* ---------------------------------------------------------------- catalogue */
+  if (search?.trim()) {
+    const q = search.trim()
+    query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%`)
+  }
+  if (tags?.length) query = query.overlaps('tags', tags)
 
-export function listProducts({ category, search, sort = 'featured', tags, limit } = {}) {
-  let items = [...PRODUCTS]
+  const { data, error } = await query
+  fail(error)
 
-  if (category) items = items.filter((it) => categoriesFor(it).includes(category))
-  if (tags?.length) items = items.filter((it) => tags.some((t) => it.tags.includes(t)))
+  let items = (data ?? []).map(toProduct)
 
-  if (search) {
-    const q = search.trim().toLowerCase()
-    if (q) {
-      items = items.filter((it) =>
-        [it.name, it.description, it.category, ...it.tags].join(' ').toLowerCase().includes(q)
-      )
-    }
+  // Category filtering happens here rather than in SQL because a product also
+  // belongs to its parent category and, when discounted, to the Deals shelf.
+  if (category) {
+    items = items.filter((p) => {
+      if (p.category === category) return true
+      if (p.category?.includes('/') && p.category.split('/')[0] === category) return true
+      if (category === 'deals' && (p.onSale || p.tags.includes('deal'))) return true
+      return false
+    })
   }
 
   const sorters = {
@@ -65,130 +96,314 @@ export function listProducts({ category, search, sort = 'featured', tags, limit 
   }
   items.sort(sorters[sort] ?? sorters.featured)
 
-  return delay(limit ? items.slice(0, limit) : items)
+  return limit ? items.slice(0, limit) : items
 }
 
-export function getProduct(slug) {
-  const found = PRODUCTS.find((it) => it.slug === slug)
-  return delay(found ?? null)
+export async function getProduct(slug) {
+  const { data, error } = await supabase
+    .from('products')
+    .select(PRODUCT_SELECT)
+    .eq('slug', slug)
+    .maybeSingle()
+  fail(error)
+  return data ? toProduct(data) : null
 }
 
-export function listRelated(product, limit = 4) {
-  const related = PRODUCTS
-    .filter((it) => it.id !== product.id && categoriesFor(it).some((c) => categoriesFor(product).includes(c)))
-    .slice(0, limit)
-  return delay(related)
+export async function listRelated(product, limit = 4) {
+  const all = await listProducts({ category: product.category })
+  return all.filter((p) => p.id !== product.id).slice(0, limit)
 }
 
-export function searchSuggestions(query, limit = 6) {
-  const q = query.trim().toLowerCase()
-  if (!q) return delay([])
-  return delay(
-    PRODUCTS.filter((it) => it.name.toLowerCase().includes(q) || it.tags.some((t) => t.includes(q))).slice(0, limit)
-  )
+export async function searchSuggestions(query, limit = 6) {
+  if (!query.trim()) return []
+  return listProducts({ search: query, limit })
 }
 
-/* ------------------------------------------------------------------ account */
+/* ---------------------------------------------------------------- account */
 
-export function getUser() {
-  return delay(read('user', SEED_USER))
-}
+export async function getUser() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
-export function updateUser(patch) {
-  const next = { ...read('user', SEED_USER), ...patch }
-  return delay(write('user', next))
-}
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .maybeSingle()
+  fail(error)
+  if (!data) return null
 
-export function listOrders() {
-  return delay(read('orders', SEED_ORDERS))
-}
-
-export function createOrder({ items, total, addressId }) {
-  const orders = read('orders', SEED_ORDERS)
-  const order = {
-    id: `NBE-${Math.floor(1000 + Math.random() * 8999)}`,
-    placedAt: new Date().toISOString().slice(0, 10),
-    status: 'processing',
-    total,
-    items: items.map((it) => ({
-      productSlug: it.slug, name: it.name, qty: it.qty, price: it.price, image: it.image,
-    })),
-    tracking: null,
-    address: addressId,
+  return {
+    id: data.id,
+    email: data.email ?? user.email,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    phone: data.phone ?? '',
+    isAdmin: data.is_admin,
+    tier: data.tier,
+    points: data.points,
+    avatarTone: data.avatar_tone,
+    memberSince: data.member_since,
+    prefs: data.prefs ?? {},
+    ...tierProgress(data.points),
   }
-  write('orders', [order, ...orders])
-
-  // Loyalty: rate lives in POINTS_PER_UNIT in lib/format.
-  const user = read('user', SEED_USER)
-  const earned = pointsFor(total)
-  write('user', { ...user, points: user.points + earned })
-  write('points', [
-    { id: uid('h'), date: order.placedAt, label: `Order ${order.id}`, points: earned },
-    ...read('points', SEED_POINT_HISTORY),
-  ])
-
-  return delay(order)
 }
 
-export function listAddresses() {
-  return delay(read('addresses', SEED_ADDRESSES))
+/** Tier thresholds live here so the loyalty screens agree with each other. */
+export const TIERS = [
+  { name: 'Rose', threshold: 0, perk: '5% back in points on every order' },
+  { name: 'Gold', threshold: 1500, perk: 'Free shipping, early access to drops' },
+  { name: 'Platinum', threshold: 3000, perk: 'Free shipping, a birthday set, studio priority' },
+]
+
+function tierProgress(points) {
+  const next = TIERS.find((t) => t.threshold > points)
+  return {
+    nextTier: next?.name ?? null,
+    pointsToNextTier: next ? next.threshold - points : 0,
+  }
 }
 
-export function saveAddress(address) {
-  const list = read('addresses', SEED_ADDRESSES)
-  const record = address.id ? address : { ...address, id: uid('addr') }
-  let next = address.id ? list.map((a) => (a.id === address.id ? record : a)) : [...list, record]
-  if (record.isDefault) next = next.map((a) => ({ ...a, isDefault: a.id === record.id }))
-  return delay(write('addresses', next))
+export async function updateUser(patch) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+
+  const row = {}
+  if (patch.firstName !== undefined) row.first_name = patch.firstName
+  if (patch.lastName !== undefined) row.last_name = patch.lastName
+  if (patch.phone !== undefined) row.phone = patch.phone
+  if (patch.prefs !== undefined) row.prefs = patch.prefs
+
+  const { error } = await supabase.from('profiles').update(row).eq('id', user.id)
+  fail(error)
+  return getUser()
 }
 
-export function deleteAddress(id) {
-  const next = read('addresses', SEED_ADDRESSES).filter((a) => a.id !== id)
-  return delay(write('addresses', next))
+/* ----------------------------------------------------------------- orders */
+
+const toOrder = (row) => ({
+  id: row.order_number,
+  uuid: row.id,
+  status: row.status,
+  placedAt: row.created_at,
+  subtotal: Number(row.subtotal),
+  shipping: Number(row.shipping),
+  discount: Number(row.discount),
+  total: Number(row.total),
+  tracking: row.tracking,
+  address: row.address,
+  customer: row.profiles
+    ? { name: `${row.profiles.first_name} ${row.profiles.last_name}`.trim(), email: row.profiles.email }
+    : null,
+  items: (row.order_items ?? []).map((i) => ({
+    productSlug: i.slug,
+    name: i.name,
+    qty: i.qty,
+    price: Number(i.price),
+    image: i.image ?? '/media/p-pearl.svg',
+  })),
+})
+
+export async function listOrders() {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*, order_items(*)')
+    .order('created_at', { ascending: false })
+  fail(error)
+  return (data ?? []).map(toOrder)
 }
 
-export function listCards() {
-  return delay(read('cards', SEED_CARDS))
+export async function createOrder({ items, addressId, address, discountCode }) {
+  let snapshot = address
+  if (!snapshot && addressId) {
+    const { data } = await supabase.from('addresses').select('*').eq('id', addressId).maybeSingle()
+    snapshot = data
+  }
+
+  const { data, error } = await supabase.rpc('place_order', {
+    p_items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
+    p_address: snapshot ?? null,
+    p_discount: discountCode ?? null,
+  })
+  fail(error)
+  return toOrder({ ...data, order_items: [] })
 }
 
-export function setDefaultCard(id) {
-  const next = read('cards', SEED_CARDS).map((c) => ({ ...c, isDefault: c.id === id }))
-  return delay(write('cards', next))
+/* -------------------------------------------------------------- addresses */
+
+const toAddress = (r) => ({
+  id: r.id, label: r.label, name: r.name, line1: r.line1, line2: r.line2 ?? '',
+  city: r.city, postcode: r.postcode, country: r.country, phone: r.phone ?? '',
+  isDefault: r.is_default,
+})
+
+export async function listAddresses() {
+  const { data, error } = await supabase
+    .from('addresses')
+    .select('*')
+    .order('is_default', { ascending: false })
+  fail(error)
+  return (data ?? []).map(toAddress)
 }
 
-export function deleteCard(id) {
-  const next = read('cards', SEED_CARDS).filter((c) => c.id !== id)
-  return delay(write('cards', next))
+export async function saveAddress(address) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+
+  const row = {
+    user_id: user.id,
+    label: address.label, name: address.name,
+    line1: address.line1, line2: address.line2 || null,
+    city: address.city, postcode: address.postcode,
+    country: address.country, phone: address.phone || null,
+    is_default: address.isDefault,
+  }
+
+  const { error } = address.id
+    ? await supabase.from('addresses').update(row).eq('id', address.id)
+    : await supabase.from('addresses').insert(row)
+  fail(error)
+  return listAddresses()
 }
 
-export function getNailProfile() {
-  return delay(read('nailProfile', SEED_NAIL_PROFILE))
+export async function deleteAddress(id) {
+  fail((await supabase.from('addresses').delete().eq('id', id)).error)
+  return listAddresses()
 }
 
-export function saveNailProfile(profile) {
-  return delay(write('nailProfile', profile))
+/* ---------------------------------------------------------- nail profile */
+
+export async function getNailProfile() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data, error } = await supabase
+    .from('nail_profiles')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  fail(error)
+
+  return {
+    shape: data?.shape ?? 'Almond',
+    length: data?.length ?? 'Medium',
+    finish: data?.finish ?? 'Glossy',
+    sizes: data?.sizes ?? { thumb: 2, index: 5, middle: 4, ring: 6, pinky: 8 },
+    allergies: data?.allergies ?? '',
+    notes: data?.notes ?? '',
+  }
 }
 
-export function listPointHistory() {
-  return delay(read('points', SEED_POINT_HISTORY))
+export async function saveNailProfile(profile) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+
+  const { error } = await supabase.from('nail_profiles').upsert({
+    user_id: user.id,
+    shape: profile.shape, length: profile.length, finish: profile.finish,
+    sizes: profile.sizes, allergies: profile.allergies, notes: profile.notes,
+  })
+  fail(error)
+  return profile
 }
 
-export function redeemReward(reward) {
-  const user = read('user', SEED_USER)
-  if (user.points < reward.cost) return Promise.reject(new Error('Not enough points'))
-  const next = write('user', { ...user, points: user.points - reward.cost })
-  write('points', [
-    { id: uid('h'), date: new Date().toISOString().slice(0, 10), label: `Redeemed: ${reward.title}`, points: -reward.cost },
-    ...read('points', SEED_POINT_HISTORY),
-  ])
-  return delay(next)
+/* --------------------------------------------------------------- wishlist */
+
+export async function listWishlist() {
+  const { data, error } = await supabase
+    .from('wishlists')
+    .select(`product_id, products(${PRODUCT_SELECT})`)
+  fail(error)
+  return (data ?? []).filter((r) => r.products).map((r) => toProduct(r.products))
 }
 
-/* ------------------------------------------------------------------ contact */
+export async function addToWishlist(productId) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+  fail((await supabase.from('wishlists').insert({ user_id: user.id, product_id: productId })).error)
+}
 
-export function sendContactMessage(payload) {
-  const list = read('messages', [])
-  const record = { ...payload, id: uid('msg'), sentAt: new Date().toISOString() }
-  write('messages', [record, ...list])
-  return delay(record)
+export async function removeFromWishlist(productId) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not signed in')
+  fail((await supabase.from('wishlists').delete().eq('user_id', user.id).eq('product_id', productId)).error)
+}
+
+/* ---------------------------------------------------------------- loyalty */
+
+export async function listPointHistory() {
+  const { data, error } = await supabase
+    .from('point_history')
+    .select('*')
+    .order('created_at', { ascending: false })
+  fail(error)
+  return (data ?? []).map((r) => ({ id: r.id, date: r.created_at, label: r.label, points: r.points }))
+}
+
+export async function listRewards() {
+  const { data, error } = await supabase
+    .from('rewards')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order')
+  fail(error)
+  return (data ?? []).map((r) => ({ id: r.id, title: r.title, blurb: r.blurb, cost: r.cost }))
+}
+
+export async function redeemReward(reward) {
+  const { error } = await supabase.rpc('redeem_reward', { p_reward: reward.id })
+  fail(error)
+  return getUser()
+}
+
+/* --------------------------------------------------------------- settings */
+
+export async function getSettings() {
+  const { data, error } = await supabase.from('site_settings').select('*')
+  fail(error)
+  return Object.fromEntries((data ?? []).map((r) => [r.key, r.value]))
+}
+
+/* ---------------------------------------------------------------- contact */
+
+export async function sendContactMessage({ name, email, topic, message }) {
+  const { error } = await supabase
+    .from('contact_messages')
+    .insert({ name, email, topic, message })
+  fail(error)
+  return true
+}
+
+/* ---------------------------------------------------------------- history */
+
+/**
+ * One dated feed of everything that has happened on this account: orders
+ * placed, points earned, rewards redeemed. Orders and points are stored
+ * separately, so they are merged here rather than in SQL.
+ */
+export async function listMyActivity() {
+  const [orders, points] = await Promise.all([listOrders(), listPointHistory()])
+
+  const fromOrders = orders.map((o) => ({
+    id: `order-${o.uuid}`,
+    at: o.placedAt,
+    kind: 'order',
+    title: `Order ${o.id} placed`,
+    detail: `${o.items.length} ${o.items.length === 1 ? 'item' : 'items'}`,
+    amount: o.total,
+    status: o.status,
+    link: '/account/orders',
+  }))
+
+  const fromPoints = points.map((p) => ({
+    id: `points-${p.id}`,
+    at: p.date,
+    kind: p.points < 0 ? 'redeemed' : 'points',
+    title: p.label,
+    detail: p.points < 0 ? 'Reward redeemed' : 'Points earned',
+    points: p.points,
+    link: '/account/rewards',
+  }))
+
+  return [...fromOrders, ...fromPoints].sort((a, b) => new Date(b.at) - new Date(a.at))
 }

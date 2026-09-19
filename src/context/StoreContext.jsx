@@ -1,10 +1,15 @@
 /**
- * Cart, wishlist and toast state for the whole storefront.
- * Persisted to localStorage; swap the persistence calls for Supabase rows later.
+ * Cart, wishlist and toast state.
+ *
+ * The cart stays in localStorage so people can shop before signing in. The
+ * wishlist follows the account when there is one, and falls back to
+ * localStorage for guests — anything saved as a guest is merged into the
+ * account on the next sign-in.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react'
-import { SHIPPING } from '../lib/format'
+import { addToWishlist, getSettings, listCategories, listWishlist, removeFromWishlist } from '../lib/api'
+import { useAuth } from './AuthContext'
 
 const StoreContext = createContext(null)
 
@@ -20,28 +25,28 @@ function load(key, fallback) {
   }
 }
 
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* quota or private mode */ }
+}
+
 function cartReducer(state, action) {
   switch (action.type) {
     case 'add': {
       const { product, qty } = action
+      // Wishlist rows carry no stock count; the checkout RPC is the real
+      // guard against overselling, so fall back to a permissive cap here.
+      const stock = Number.isFinite(product.stock) ? product.stock : 99
       const existing = state.find((line) => line.id === product.id)
       if (existing) {
         return state.map((line) =>
-          line.id === product.id ? { ...line, qty: Math.min(line.qty + qty, product.stock) } : line
+          line.id === product.id ? { ...line, qty: Math.min(line.qty + qty, stock) } : line
         )
       }
-      return [
-        ...state,
-        {
-          id: product.id,
-          slug: product.slug,
-          name: product.name,
-          price: product.price,
-          image: product.image,
-          stock: product.stock,
-          qty: Math.min(qty, product.stock),
-        },
-      ]
+      return [...state, {
+        id: product.id, slug: product.slug, name: product.name,
+        price: product.price, image: product.image, stock,
+        qty: Math.min(qty, stock),
+      }]
     }
     case 'setQty':
       return state
@@ -56,52 +61,102 @@ function cartReducer(state, action) {
   }
 }
 
+const DEFAULT_SHIPPING = { freeOver: 5000, flatRate: 300, minimumOrder: 1000 }
+
 export function StoreProvider({ children }) {
+  const { isSignedIn } = useAuth()
   const [cart, dispatch] = useReducer(cartReducer, null, () => load(CART_KEY, []))
   const [wishlist, setWishlist] = useState(() => load(WISH_KEY, []))
   const [toasts, setToasts] = useState([])
+  const [shipping, setShipping] = useState(DEFAULT_SHIPPING)
+  const [settings, setSettings] = useState({})
+  const [categories, setCategories] = useState([])
 
+  useEffect(() => { save(CART_KEY, cart) }, [cart])
+  useEffect(() => { if (!isSignedIn) save(WISH_KEY, wishlist) }, [wishlist, isSignedIn])
+
+  // Settings and categories are both editable in the admin panel, so the shop
+  // reads them from the database rather than from a file in the bundle.
   useEffect(() => {
-    try { localStorage.setItem(CART_KEY, JSON.stringify(cart)) } catch { /* quota */ }
-  }, [cart])
+    getSettings()
+      .then((s) => {
+        setSettings(s)
+        setShipping({
+          freeOver: Number(s.shipping_free_over ?? DEFAULT_SHIPPING.freeOver),
+          flatRate: Number(s.shipping_flat_rate ?? DEFAULT_SHIPPING.flatRate),
+          minimumOrder: Number(s.minimum_order ?? DEFAULT_SHIPPING.minimumOrder),
+        })
+      })
+      .catch(() => { /* keep the defaults if the store is unreachable */ })
 
-  useEffect(() => {
-    try { localStorage.setItem(WISH_KEY, JSON.stringify(wishlist)) } catch { /* quota */ }
-  }, [wishlist])
+    listCategories()
+      .then((rows) => setCategories(rows.filter((c) => c.is_active)))
+      .catch(() => setCategories([]))
+  }, [])
 
-  const toast = useCallback((message, tone = 'default') => {
+  const toast = useCallback((message) => {
     const id = Math.random().toString(36).slice(2)
-    setToasts((list) => [...list, { id, message, tone }])
+    setToasts((list) => [...list, { id, message }])
     setTimeout(() => setToasts((list) => list.filter((t) => t.id !== id)), 2600)
   }, [])
+
+  // On sign-in, push anything saved as a guest up to the account, then read back.
+  useEffect(() => {
+    let active = true
+    if (!isSignedIn) return
+
+    ;(async () => {
+      const pending = load(WISH_KEY, [])
+      for (const item of pending) {
+        try { await addToWishlist(item.id) } catch { /* already saved */ }
+      }
+      if (pending.length) save(WISH_KEY, [])
+      try {
+        const rows = await listWishlist()
+        if (active) setWishlist(rows.map((p) => ({ id: p.id, slug: p.slug, name: p.name, price: p.price, image: p.image })))
+      } catch { /* leave what we have */ }
+    })()
+
+    return () => { active = false }
+  }, [isSignedIn])
 
   const addToCart = useCallback((product, qty = 1) => {
     dispatch({ type: 'add', product, qty })
     toast(`${product.name} added to bag`)
   }, [toast])
 
-  const toggleWishlist = useCallback((product) => {
-    setWishlist((list) => {
-      const exists = list.some((it) => it.id === product.id)
-      if (exists) {
-        toast(`${product.name} removed from wishlist`)
-        return list.filter((it) => it.id !== product.id)
-      }
-      toast(`${product.name} saved to wishlist`)
-      return [...list, { id: product.id, slug: product.slug, name: product.name, price: product.price, image: product.image }]
-    })
-  }, [toast])
+  const toggleWishlist = useCallback(async (product) => {
+    const saved = wishlist.some((it) => it.id === product.id)
+
+    setWishlist((list) => saved
+      ? list.filter((it) => it.id !== product.id)
+      : [...list, { id: product.id, slug: product.slug, name: product.name, price: product.price, image: product.image }])
+
+    toast(saved ? `${product.name} removed from wishlist` : `${product.name} saved to wishlist`)
+
+    if (!isSignedIn) return
+    try {
+      if (saved) await removeFromWishlist(product.id)
+      else await addToWishlist(product.id)
+    } catch {
+      toast('Could not sync your wishlist')
+    }
+  }, [wishlist, isSignedIn, toast])
 
   const value = useMemo(() => {
     const count = cart.reduce((sum, line) => sum + line.qty, 0)
     const subtotal = cart.reduce((sum, line) => sum + line.qty * line.price, 0)
-    const shipping = subtotal === 0 || subtotal >= SHIPPING.freeOver ? 0 : SHIPPING.flatRate
+    const delivery = subtotal === 0 || subtotal >= shipping.freeOver ? 0 : shipping.flatRate
     return {
       cart,
       count,
       subtotal,
-      shipping,
-      total: subtotal + shipping,
+      shipping: delivery,
+      total: subtotal + delivery,
+      shippingRules: shipping,
+      settings,
+      categories,
+      belowMinimum: subtotal > 0 && subtotal < shipping.minimumOrder,
       addToCart,
       setQty: (id, qty) => dispatch({ type: 'setQty', id, qty }),
       removeFromCart: (id) => dispatch({ type: 'remove', id }),
@@ -112,7 +167,7 @@ export function StoreProvider({ children }) {
       toasts,
       toast,
     }
-  }, [cart, wishlist, toasts, addToCart, toggleWishlist, toast])
+  }, [cart, wishlist, toasts, shipping, settings, categories, addToCart, toggleWishlist, toast])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

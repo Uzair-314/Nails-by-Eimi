@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import Icon from '../../components/Icon'
 import { Badge, PageHeading, Skeleton } from '../../components/ui'
-import { getUser, listPointHistory, redeemReward } from '../../lib/api'
-import { REWARD_TIERS, SEED_REWARDS } from '../../data/account'
+import { TIERS, getUser, listPointHistory, listRewards, redeemReward } from '../../lib/api'
 import { formatDate, formatPoints } from '../../lib/format'
 import { useStore } from '../../context/StoreContext'
 
@@ -36,6 +35,7 @@ function ProgressRing({ value, max, size = 132, stroke = 11 }) {
 export default function RewardsLoyalty() {
   const [user, setUser] = useState(null)
   const [history, setHistory] = useState(null)
+  const [rewards, setRewards] = useState([])
   const [tab, setTab] = useState('Rewards')
   const [busy, setBusy] = useState(null)
   const { toast } = useStore()
@@ -43,6 +43,7 @@ export default function RewardsLoyalty() {
   useEffect(() => {
     getUser().then(setUser)
     listPointHistory().then(setHistory)
+    listRewards().then(setRewards)
   }, [])
 
   const redeem = async (reward) => {
@@ -100,7 +101,7 @@ export default function RewardsLoyalty() {
         <section className="card p-6">
           <h2 className="font-display text-[20px] font-semibold text-ink">Your perks</h2>
           <ul className="mt-4 space-y-3">
-            {(REWARD_TIERS.find((t) => t.name === user.tier)?.perk ?? '')
+            {(TIERS.find((t) => t.name === user.tier)?.perk ?? '')
               .split(', ')
               .map((perk) => (
                 <li key={perk} className="flex items-start gap-2.5 text-[14px] text-ink">
@@ -133,7 +134,7 @@ export default function RewardsLoyalty() {
         <div className="mt-5">
           {tab === 'Rewards' && (
             <div className="grid gap-4 sm:grid-cols-2">
-              {SEED_REWARDS.map((reward) => {
+              {rewards.map((reward) => {
                 const affordable = user.points >= reward.cost
                 return (
                   <article key={reward.id} className="card flex flex-col p-5">
@@ -162,7 +163,7 @@ export default function RewardsLoyalty() {
 
           {tab === 'Tiers' && (
             <div className="grid gap-4 sm:grid-cols-3">
-              {REWARD_TIERS.map((tier) => {
+              {TIERS.map((tier) => {
                 const current = tier.name === user.tier
                 return (
                   <article

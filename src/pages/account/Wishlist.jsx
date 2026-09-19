@@ -3,7 +3,6 @@ import Icon from '../../components/Icon'
 import { EmptyState, PageHeading } from '../../components/ui'
 import { formatPrice } from '../../lib/format'
 import { useStore } from '../../context/StoreContext'
-import { PRODUCTS } from '../../data/products'
 
 export default function Wishlist() {
   const { wishlist, toggleWishlist, addToCart } = useStore()
@@ -27,7 +26,7 @@ export default function Wishlist() {
         ) : (
           <ul className="space-y-4">
             {wishlist.map((item) => {
-              const product = PRODUCTS.find((p) => p.id === item.id)
+              const product = item
               return (
                 <li key={item.id} className="card flex flex-wrap items-center gap-4 p-4">
                   <Link to={`/product/${item.slug}`} className="shrink-0">
@@ -45,11 +44,11 @@ export default function Wishlist() {
                     <button
                       type="button"
                       onClick={() => product && addToCart(product, 1)}
-                      disabled={!product || product.stock === 0}
+                      disabled={false}
                       className="btn-primary flex-1 sm:flex-none"
                     >
                       <Icon name="bag" size={16} />
-                      {product?.stock === 0 ? 'Sold out' : 'Add to bag'}
+                      Add to bag
                     </button>
                     <button
                       type="button"

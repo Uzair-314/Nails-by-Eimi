@@ -3,23 +3,21 @@ import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
 import { Badge, EmptyState, PageHeading } from '../components/ui'
 import useAsync from '../hooks/useAsync'
-import { createOrder, listAddresses, listCards } from '../lib/api'
-import { formatPrice, pointsFor } from '../lib/format'
+import { createOrder, listAddresses } from '../lib/api'
+import { formatPrice } from '../lib/format'
 import { useStore } from '../context/StoreContext'
 
 export default function Checkout() {
-  const { cart, subtotal, shipping, total, clearCart, toast } = useStore()
+  const { cart, subtotal, shipping, total, clearCart, toast, shippingRules, belowMinimum } = useStore()
   const navigate = useNavigate()
 
-  const { data: addresses } = useAsync(listAddresses, [])
-  const { data: cards } = useAsync(listCards, [])
-
+  const { data: addresses, loading } = useAsync(listAddresses, [])
   const [addressId, setAddressId] = useState(null)
-  const [cardId, setCardId] = useState(null)
+  const [discountCode, setDiscountCode] = useState('')
   const [placing, setPlacing] = useState(false)
+  const [error, setError] = useState(null)
 
   const selectedAddress = addressId ?? addresses?.find((a) => a.isDefault)?.id ?? addresses?.[0]?.id
-  const selectedCard = cardId ?? cards?.find((c) => c.isDefault)?.id ?? cards?.[0]?.id
 
   if (cart.length === 0 && !placing) {
     return (
@@ -39,96 +37,118 @@ export default function Checkout() {
 
   const placeOrder = async (e) => {
     e.preventDefault()
+    setError(null)
+
+    if (belowMinimum) {
+      setError(`Orders start at ${formatPrice(shippingRules.minimumOrder)}. Add a little more to your bag.`)
+      return
+    }
+    if (!selectedAddress) {
+      setError('Add a delivery address before checking out.')
+      return
+    }
+
     setPlacing(true)
     try {
       const order = await createOrder({
         items: cart,
-        total,
         addressId: selectedAddress,
+        discountCode: discountCode.trim() || null,
       })
       clearCart()
       toast(`Order ${order.id} placed`)
       navigate('/account/orders')
-    } catch {
-      toast('Could not place the order — please try again')
+    } catch (err) {
+      setError(err.message ?? 'Could not place the order — please try again')
       setPlacing(false)
     }
   }
 
   return (
     <div className="container-e py-12">
-      <PageHeading eyebrow="Almost there" title="Checkout" subtitle="Confirm where it goes and how you are paying." />
+      <PageHeading eyebrow="Almost there" title="Checkout" subtitle="Confirm where it goes and place the order." />
 
       <form onSubmit={placeOrder} className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
+          {error && (
+            <p className="flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-800">
+              <Icon name="info" size={15} className="mt-0.5 shrink-0" />
+              {error}
+            </p>
+          )}
+
           <section className="card p-6">
             <h2 className="font-display text-[20px] font-semibold text-ink">Delivery address</h2>
-            <div className="mt-4 space-y-3">
-              {addresses?.map((address) => (
-                <label
-                  key={address.id}
-                  className={[
-                    'flex cursor-pointer gap-3 rounded-xl border p-4 transition',
-                    selectedAddress === address.id ? 'border-wine bg-wine-50' : 'border-line hover:border-wine-200',
-                  ].join(' ')}
-                >
-                  <input
-                    type="radio"
-                    name="address"
-                    checked={selectedAddress === address.id}
-                    onChange={() => setAddressId(address.id)}
-                    className="mt-1 accent-[#E01B6A]"
-                  />
-                  <span className="text-[14px] leading-relaxed">
-                    <span className="flex items-center gap-2 font-medium text-ink">
-                      {address.label}
-                      {address.isDefault && <Badge>Default</Badge>}
-                    </span>
-                    <span className="mt-1 block text-muted">
-                      {address.name}, {address.line1}
-                      {address.line2 ? `, ${address.line2}` : ''}, {address.city} {address.postcode}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-            <Link to="/account/addresses" className="btn-ghost mt-4">
-              <Icon name="plus" size={16} />
-              Manage addresses
-            </Link>
+
+            {loading ? (
+              <p className="mt-4 text-sm text-muted">Loading your addresses…</p>
+            ) : addresses.length === 0 ? (
+              <div className="mt-4">
+                <p className="text-sm text-muted">No addresses saved yet.</p>
+                <Link to="/account/addresses" className="btn-primary mt-4">
+                  <Icon name="plus" size={16} />
+                  Add an address
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div className="mt-4 space-y-3">
+                  {addresses.map((address) => (
+                    <label
+                      key={address.id}
+                      className={[
+                        'flex cursor-pointer gap-3 rounded-xl border p-4 transition',
+                        selectedAddress === address.id ? 'border-wine bg-wine-50' : 'border-line hover:border-wine-200',
+                      ].join(' ')}
+                    >
+                      <input
+                        type="radio"
+                        name="address"
+                        checked={selectedAddress === address.id}
+                        onChange={() => setAddressId(address.id)}
+                        className="mt-1 accent-[#E01B6A]"
+                      />
+                      <span className="text-[14px] leading-relaxed">
+                        <span className="flex items-center gap-2 font-medium text-ink">
+                          {address.label}
+                          {address.isDefault && <Badge>Default</Badge>}
+                        </span>
+                        <span className="mt-1 block text-muted">
+                          {address.name}, {address.line1}
+                          {address.line2 ? `, ${address.line2}` : ''}, {address.city} {address.postcode}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <Link to="/account/addresses" className="btn-ghost mt-4">
+                  <Icon name="plus" size={16} />
+                  Manage addresses
+                </Link>
+              </>
+            )}
+          </section>
+
+          <section className="card p-6">
+            <h2 className="font-display text-[20px] font-semibold text-ink">Discount code</h2>
+            <label className="mt-4 block">
+              <input
+                value={discountCode}
+                onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                className="field uppercase"
+                placeholder="Have a code?"
+              />
+            </label>
+            <p className="mt-2 text-[12px] text-muted">
+              Checked when the order is placed; the total below updates once it goes through.
+            </p>
           </section>
 
           <section className="card p-6">
             <h2 className="font-display text-[20px] font-semibold text-ink">Payment</h2>
-            <div className="mt-4 space-y-3">
-              {cards?.map((card) => (
-                <label
-                  key={card.id}
-                  className={[
-                    'flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition',
-                    selectedCard === card.id ? 'border-wine bg-wine-50' : 'border-line hover:border-wine-200',
-                  ].join(' ')}
-                >
-                  <input
-                    type="radio"
-                    name="card"
-                    checked={selectedCard === card.id}
-                    onChange={() => setCardId(card.id)}
-                    className="accent-[#E01B6A]"
-                  />
-                  <Icon name="card" size={20} className="text-wine" />
-                  <span className="flex-1 text-[14px]">
-                    <span className="font-medium text-ink">{card.brand} ···· {card.last4}</span>
-                    <span className="ml-2 text-muted">
-                      {String(card.expMonth).padStart(2, '0')}/{String(card.expYear).slice(-2)}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-            <p className="mt-4 flex items-start gap-2 text-[12px] leading-relaxed text-muted">
-              <Icon name="info" size={14} className="mt-0.5 shrink-0" />
-              This is a demo checkout — no card is charged and no card details are collected.
+            <p className="mt-3 flex items-start gap-2 text-[13px] leading-relaxed text-muted">
+              <Icon name="info" size={15} className="mt-0.5 shrink-0" />
+              Cash on delivery. No card details are collected anywhere on this site.
             </p>
           </section>
         </div>
@@ -165,13 +185,20 @@ export default function Checkout() {
               </div>
             </dl>
 
-            <button type="submit" disabled={placing} className="btn-primary mt-6 w-full">
+            {belowMinimum && (
+              <p className="mt-4 rounded-xl bg-blush px-3.5 py-2.5 text-[13px] text-ink">
+                Orders start at {formatPrice(shippingRules.minimumOrder)}.
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={placing || belowMinimum || !selectedAddress}
+              className="btn-primary mt-6 w-full"
+            >
               {placing ? 'Placing order…' : 'Place order'}
               {!placing && <Icon name="arrowRight" size={16} />}
             </button>
-            <p className="mt-3 text-center text-[12px] text-muted">
-              You will earn {pointsFor(total)} points on this order.
-            </p>
           </div>
         </aside>
       </form>

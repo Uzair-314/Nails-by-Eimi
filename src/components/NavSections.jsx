@@ -1,7 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import Icon from './Icon'
-import { CATEGORY_LINKS, MENU_LINKS } from '../data/navigation'
+import { MENU_LINKS } from '../data/navigation'
+import { useStore } from '../context/StoreContext'
+import { useAuth } from '../context/AuthContext'
+import { ADMIN_AVAILABLE } from '../lib/adminAvailable'
+
+/** Database rows -> the nested shape the menus render. */
+export function useCategoryTree() {
+  const { categories } = useStore()
+  return useMemo(() => {
+    const parents = categories.filter((c) => !c.parent_id)
+    return parents.map((p) => ({
+      ...p,
+      children: categories.filter((c) => c.parent_id === p.id),
+    }))
+  }, [categories])
+}
 
 /**
  * Navigation lists shared by the mobile drawer and the desktop sidebar.
@@ -18,6 +33,8 @@ const rowClass = ({ isActive }) =>
   ].join(' ')
 
 export function MenuList({ onNavigate }) {
+  const { isAdmin } = useAuth()
+
   return (
     <ul className="space-y-0.5">
       {MENU_LINKS.map((item) => (
@@ -28,6 +45,16 @@ export function MenuList({ onNavigate }) {
           </NavLink>
         </li>
       ))}
+
+      {/* Admins get a way into the panel; nobody else sees this row. */}
+      {isAdmin && ADMIN_AVAILABLE && (
+        <li>
+          <NavLink to="/admin" className={rowClass} onClick={onNavigate}>
+            <Icon name="settings" size={19} className="shrink-0 opacity-80" />
+            <span>Admin panel</span>
+          </NavLink>
+        </li>
+      )}
     </ul>
   )
 }
@@ -35,14 +62,15 @@ export function MenuList({ onNavigate }) {
 export function CategoryList({ onNavigate }) {
   const [expanded, setExpanded] = useState(() => new Set())
   const location = useLocation()
+  const tree = useCategoryTree()
 
   // Auto-expand whichever group contains the current route.
   useEffect(() => {
-    const parent = CATEGORY_LINKS.find((c) =>
+    const parent = tree.find((c) =>
       c.children?.some((child) => location.pathname === `/category/${child.slug}`)
     )
     if (parent) setExpanded((s) => new Set(s).add(parent.slug))
-  }, [location.pathname])
+  }, [location.pathname, tree])
 
   const toggle = (slug) =>
     setExpanded((s) => {
@@ -53,13 +81,13 @@ export function CategoryList({ onNavigate }) {
 
   return (
     <ul className="space-y-0.5">
-      {CATEGORY_LINKS.map((cat) => {
-        if (!cat.children) {
+      {tree.map((cat) => {
+        if (!cat.children?.length) {
           return (
             <li key={cat.slug}>
               <NavLink to={`/category/${cat.slug}`} className={rowClass} onClick={onNavigate}>
                 <Icon name={cat.icon} size={19} className="shrink-0 opacity-80" />
-                <span>{cat.label}</span>
+                <span>{cat.name}</span>
               </NavLink>
             </li>
           )
@@ -77,7 +105,7 @@ export function CategoryList({ onNavigate }) {
                          transition duration-200 hover:bg-white hover:text-wine"
             >
               <Icon name={cat.icon} size={19} className="shrink-0 opacity-80" />
-              <span className="flex-1 text-left">{cat.label}</span>
+              <span className="flex-1 text-left">{cat.name}</span>
               <Icon
                 name="chevronDown"
                 size={17}
@@ -108,7 +136,7 @@ export function CategoryList({ onNavigate }) {
                         ].join(' ')
                       }
                     >
-                      {child.label}
+                      {child.name}
                     </NavLink>
                   </li>
                 ))}

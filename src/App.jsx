@@ -1,5 +1,5 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { Link } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import NewArrivals from './pages/NewArrivals'
@@ -10,15 +10,46 @@ import SearchPage from './pages/Search'
 import Contact from './pages/Contact'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
+import Login from './pages/Login'
 import AccountLayout from './pages/account/AccountLayout'
 import DashboardHome from './pages/account/DashboardHome'
 import MyOrders from './pages/account/MyOrders'
+import History from './pages/account/History'
 import Wishlist from './pages/account/Wishlist'
 import SavedAddresses from './pages/account/SavedAddresses'
 import PaymentMethods from './pages/account/PaymentMethods'
 import NailProfile from './pages/account/NailProfile'
 import RewardsLoyalty from './pages/account/RewardsLoyalty'
 import AccountSettings from './pages/account/AccountSettings'
+import { useAuth } from './context/AuthContext'
+
+/**
+ * The admin panel is kept out of this repository for now.
+ *
+ * `import.meta.glob` resolves to an empty object when the folder is missing
+ * rather than failing the build, so the storefront compiles either way. Where
+ * the folder is present — a local working copy — the section is code-split and
+ * loaded on demand.
+ */
+const ADMIN_ENTRY = './pages/admin/index.jsx'
+const adminModules = import.meta.glob('./pages/admin/index.jsx')
+const AdminSection = adminModules[ADMIN_ENTRY] ? lazy(adminModules[ADMIN_ENTRY]) : null
+
+/** Sends signed-out visitors to the login screen, remembering where they were headed. */
+function RequireAuth({ children }) {
+  const { loading, isSignedIn } = useAuth()
+  const location = useLocation()
+
+  if (loading) {
+    return (
+      <div className="container-e grid place-items-center py-24">
+        <p className="text-sm text-muted">One moment…</p>
+      </div>
+    )
+  }
+  if (!isSignedIn) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  return children
+}
 
 function NotFound() {
   return (
@@ -36,6 +67,24 @@ function NotFound() {
 export default function App() {
   return (
     <Routes>
+      {/* Admin sits outside the storefront shell — its own layout and guard. */}
+      {AdminSection && (
+        <Route
+          path="/admin/*"
+          element={
+            <Suspense
+              fallback={
+                <div className="grid min-h-screen place-items-center bg-canvas">
+                  <p className="text-sm text-muted">Loading the admin panel…</p>
+                </div>
+              }
+            >
+              <AdminSection />
+            </Suspense>
+          }
+        />
+      )}
+
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="new-arrivals" element={<NewArrivals />} />
@@ -45,14 +94,16 @@ export default function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="contact" element={<Contact />} />
         <Route path="cart" element={<Cart />} />
-        <Route path="checkout" element={<Checkout />} />
+        <Route path="login" element={<Login />} />
+        <Route path="checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
 
         {/* The menu's "Rewards / Loyalty" entry lands on the member dashboard. */}
         <Route path="rewards" element={<Navigate to="/account/rewards" replace />} />
 
-        <Route path="account" element={<AccountLayout />}>
+        <Route path="account" element={<RequireAuth><AccountLayout /></RequireAuth>}>
           <Route index element={<DashboardHome />} />
           <Route path="orders" element={<MyOrders />} />
+          <Route path="history" element={<History />} />
           <Route path="wishlist" element={<Wishlist />} />
           <Route path="addresses" element={<SavedAddresses />} />
           <Route path="payment" element={<PaymentMethods />} />

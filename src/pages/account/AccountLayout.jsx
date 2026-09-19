@@ -1,12 +1,15 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon'
 import useAsync from '../../hooks/useAsync'
 import { getUser } from '../../lib/api'
 import { useStore } from '../../context/StoreContext'
+import { useAuth } from '../../context/AuthContext'
+import { ADMIN_AVAILABLE } from '../../lib/adminAvailable'
 
 const ACCOUNT_NAV = [
   { to: '/account', label: 'Dashboard', icon: 'home', end: true },
   { to: '/account/orders', label: 'My Orders', icon: 'bag' },
+  { to: '/account/history', label: 'History', icon: 'clock' },
   { to: '/account/wishlist', label: 'Wishlist', icon: 'heart' },
   { to: '/account/addresses', label: 'Addresses', icon: 'pin' },
   { to: '/account/payment', label: 'Payment', icon: 'card' },
@@ -23,10 +26,12 @@ const ACCOUNT_NAV = [
 export default function AccountLayout() {
   const { data: user } = useAsync(getUser, [])
   const { toast } = useStore()
+  const { signOut, isAdmin } = useAuth()
   const navigate = useNavigate()
 
-  const signOut = () => {
-    toast('Signed out of the demo account')
+  const handleSignOut = async () => {
+    await signOut()
+    toast('Signed out')
     navigate('/')
   }
 
@@ -49,15 +54,25 @@ export default function AccountLayout() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={signOut}
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-[14px] text-muted
-                       transition hover:bg-white hover:text-wine"
-          >
-            <Icon name="logout" size={17} />
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Only rendered for admins; the database blocks everyone else regardless. */}
+            {isAdmin && ADMIN_AVAILABLE && (
+              <Link to="/admin" className="btn-primary !py-2 text-[13px]">
+                <Icon name="settings" size={16} />
+                Admin panel
+              </Link>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[14px] text-muted
+                         transition hover:bg-white hover:text-wine"
+            >
+              <Icon name="logout" size={17} />
+              Logout
+            </button>
+          </div>
         </div>
 
         <nav aria-label="Account">

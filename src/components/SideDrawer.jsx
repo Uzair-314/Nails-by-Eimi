@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import Icon from './Icon'
+import { formatPrice } from '../lib/format'
+import { useStore } from '../context/StoreContext'
 import { CategoryList, MenuList } from './NavSections'
 
 const TABS = [
@@ -17,6 +19,7 @@ const TABS = [
  */
 export default function SideDrawer({ open, onClose }) {
   const [tab, setTab] = useState('menu')
+  const { shippingRules } = useStore()
   const panelRef = useRef(null)
   const location = useLocation()
 
@@ -136,7 +139,7 @@ export default function SideDrawer({ open, onClose }) {
         </nav>
 
         <div className="border-t border-line/80 px-5 py-4">
-          <p className="text-[11px] text-muted">Free delivery over Rs 5,000</p>
+          <p className="text-[11px] text-muted">{`Free delivery over ${formatPrice(shippingRules.freeOver)}`}</p>
           <div className="mt-3 flex gap-2">
             <a href="https://instagram.com" target="_blank" rel="noreferrer"
                className="grid h-10 w-10 place-items-center rounded-full bg-white text-muted transition hover:text-wine"
