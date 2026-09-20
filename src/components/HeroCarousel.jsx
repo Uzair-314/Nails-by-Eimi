@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from './Icon'
-import { SLIDES } from '../data/slides'
+import { listHeroSlides } from '../lib/api'
+import useAsync from '../hooks/useAsync'
 
 const AUTOPLAY_MS = 5000
 const SWIPE_THRESHOLD = 50 // px of horizontal travel before a drag counts as a swipe
@@ -11,10 +12,15 @@ const SWIPE_THRESHOLD = 50 // px of horizontal travel before a drag counts as a 
  *
  * - Advances on its own every 5s, pausing on hover, focus, drag and when the tab is hidden.
  * - Drag or swipe horizontally to move between slides; the track follows the finger.
- * - Capped at three slides by design; the data file is the single source of truth.
+ * - Capped at three slides by design, and run from the admin panel.
+ *
+ * Images are drawn with object-cover, which never stretches them. The slot is a
+ * different shape on phone, tablet and desktop, so something has to be cropped;
+ * each slide carries a focal point saying what must stay in frame.
  */
 export default function HeroCarousel() {
-  const slides = SLIDES.slice(0, 3)
+  const { data, loading } = useAsync(listHeroSlides, [])
+  const slides = data ?? []
   const [index, setIndex] = useState(0)
   const [drag, setDrag] = useState(0)
   const [paused, setPaused] = useState(false)
@@ -88,6 +94,23 @@ export default function HeroCarousel() {
 
   const dragging = drag !== 0
 
+  // Hiding a slide in the admin shortens the list, which can leave the index
+  // pointing past the end.
+  useEffect(() => {
+    if (slides.length && index > slides.length - 1) setIndex(0)
+  }, [slides.length, index])
+
+  // Hold the space while they load, so the page below does not jump when they
+  // arrive. If the admin has hidden every slide, show nothing at all.
+  if (loading && !slides.length) {
+    return (
+      <section className="container-e" aria-hidden="true">
+        <div className="aspect-[4/5] w-full animate-pulse rounded-[20px] bg-wine-50 sm:aspect-[16/9] lg:aspect-[21/9]" />
+      </section>
+    )
+  }
+  if (!slides.length) return null
+
   return (
     <section
       aria-roledescription="carousel"
@@ -122,14 +145,15 @@ export default function HeroCarousel() {
                 className="relative w-full shrink-0 select-none"
               >
                 <div className="relative aspect-[4/5] w-full sm:aspect-[16/9] lg:aspect-[21/9]">
-                  {/* Portrait crops keep the subject (right of centre in the art) in frame;
-                      wide crops show the whole composition with the copy to its left. */}
+                  {/* object-cover never distorts the picture; the focal point set in
+                      the admin decides which part survives the crop. */}
                   <img
                     src={slide.image}
                     alt={slide.alt}
                     draggable="false"
                     loading={i === 0 ? 'eager' : 'lazy'}
-                    className="absolute inset-0 h-full w-full object-cover object-right sm:object-center"
+                    style={{ objectPosition: slide.focal }}
+                    className="absolute inset-0 h-full w-full object-cover"
                   />
 
                   {/* Scrim sits only under the copy so the artwork keeps its colour. */}
@@ -147,15 +171,17 @@ export default function HeroCarousel() {
                       <p className="mt-3 max-w-md text-[14px] leading-relaxed text-white/85 sm:text-[15px]">
                         {slide.copy}
                       </p>
-                      <Link
-                        to={slide.cta.to}
-                        tabIndex={i === index ? 0 : -1}
-                        className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm
-                                   font-medium text-ink shadow-lift transition hover:bg-wine hover:text-white"
-                      >
-                        {slide.cta.label}
-                        <Icon name="arrowRight" size={16} />
-                      </Link>
+                      {slide.cta?.to && (
+                        <Link
+                          to={slide.cta.to}
+                          tabIndex={i === index ? 0 : -1}
+                          className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm
+                                     font-medium text-ink shadow-lift transition hover:bg-wine hover:text-white"
+                        >
+                          {slide.cta.label}
+                          <Icon name="arrowRight" size={16} />
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

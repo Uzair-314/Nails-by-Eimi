@@ -646,3 +646,46 @@ export async function markNotificationsRead(ids) {
     .update({ read_at: new Date().toISOString() })
     .in('id', ids)
 }
+
+/* ------------------------------------------------------------ hero slides */
+
+/**
+ * The home page carousel, run from the admin.
+ *
+ * `focal` becomes CSS object-position. The image is always drawn with
+ * object-cover, which never stretches it — but the slot is a different shape on
+ * phone, tablet and desktop, so something has to be cropped, and this decides
+ * what stays in frame.
+ */
+export async function listHeroSlides() {
+  const { data, error } = await supabase
+    .from('hero_slides')
+    .select('*, products(slug), categories(slug)')
+    .eq('is_active', true)
+    .order('sort_order')
+    .limit(3)
+  fail(error)
+
+  return (data ?? []).map((s) => ({
+    id: s.id,
+    image: s.image_url,
+    alt: s.alt ?? '',
+    eyebrow: s.eyebrow,
+    title: s.title,
+    copy: s.copy,
+    focal: `${s.focal_x}% ${s.focal_y}%`,
+    cta: s.cta_label
+      ? { label: s.cta_label, to: heroSlideTarget(s) }
+      : null,
+  }))
+}
+
+/** Resolves a slide's button to a path. Null when the target has been deleted. */
+function heroSlideTarget(s) {
+  switch (s.link_type) {
+    case 'product':  return s.products?.slug  ? `/product/${s.products.slug}`   : null
+    case 'category': return s.categories?.slug ? `/category/${s.categories.slug}` : null
+    case 'url':      return s.url || null
+    default:         return null
+  }
+}
