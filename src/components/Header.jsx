@@ -48,9 +48,6 @@ export default function Header({ onOpenMenu, onOpenSearch }) {
           <span className="whitespace-nowrap font-display text-[19px] font-semibold tracking-[0.01em] text-wine sm:text-[24px]">
             Nails By Eimi
           </span>
-          <span className="mt-0.5 hidden text-[9px] uppercase tracking-[0.34em] text-rose sm:block">
-            Press-on Atelier
-          </span>
         </Link>
 
         {/* Pushes the controls right on desktop, where nothing sits on the left. */}

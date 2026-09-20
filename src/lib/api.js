@@ -586,3 +586,61 @@ export async function mergeGuestCart(guestLines) {
 
   return listCart()
 }
+
+/* ------------------------------------------------------------ order status */
+
+const toTracked = (row) => !row ? null : {
+  orderNumber: row.order_number,
+  status: row.status,
+  total: Number(row.total),
+  shippingMethod: row.shipping_method,
+  tracking: row.tracking,
+  placedAt: row.created_at,
+  updatedAt: row.updated_at,
+}
+
+/**
+ * Looks up an order by its uuid, which the browser keeps after checkout.
+ *
+ * Returns null rather than throwing when the order has gone, so a stale id in
+ * localStorage quietly drops off instead of breaking the page it sits on.
+ */
+export async function trackOrderById(id) {
+  if (!id) return null
+  const { data, error } = await supabase.rpc('track_order_by_id', { p_id: id })
+  if (error) return null
+  return toTracked(data?.[0])
+}
+
+/** Looks up an order by its number and the phone it was placed with. */
+export async function trackOrder(orderNumber, phone) {
+  const { data, error } = await supabase.rpc('track_order', {
+    p_number: orderNumber,
+    p_phone: phone,
+  })
+  fail(error)
+  return toTracked(data?.[0])
+}
+
+/* ----------------------------------------------------------- notifications */
+
+/** Unread notifications for the signed-in customer. Guests have none. */
+export async function listNotifications() {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('id, message, status, order_id, created_at')
+    .eq('audience', 'customer')
+    .is('read_at', null)
+    .order('created_at', { ascending: false })
+    .limit(20)
+  if (error) return []
+  return data ?? []
+}
+
+export async function markNotificationsRead(ids) {
+  if (!ids?.length) return
+  await supabase
+    .from('notifications')
+    .update({ read_at: new Date().toISOString() })
+    .in('id', ids)
+}

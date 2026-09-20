@@ -8,6 +8,7 @@ import {
   saveAbandonedCart, shippingCostFor,
 } from '../lib/api'
 import { formatPrice } from '../lib/format'
+import { rememberOrder } from '../lib/placedOrders'
 import { useAuth } from '../context/AuthContext'
 import { useStore } from '../context/StoreContext'
 
@@ -202,6 +203,8 @@ export default function Checkout() {
 
       // Kept so a refresh on the confirmation page still shows the order.
       try { localStorage.setItem('nbe:lastOrder', JSON.stringify(order)) } catch { /* private mode */ }
+      // And kept longer, so this device can follow the order's progress.
+      rememberOrder(order)
 
       navigate('/order-placed', { replace: true, state: { order } })
     } catch (err) {

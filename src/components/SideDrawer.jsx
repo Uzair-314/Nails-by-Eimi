@@ -71,7 +71,6 @@ export default function SideDrawer({ open, onClose }) {
         <div className="flex items-start justify-between gap-3 px-5 pb-3 pt-4">
           <div className="leading-tight">
             <p className="font-display text-[21px] font-semibold text-wine">Nails By Eimi</p>
-            <p className="text-[9px] uppercase tracking-[0.3em] text-rose">Press-on Atelier</p>
           </div>
           <button
             type="button"

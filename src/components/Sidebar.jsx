@@ -24,7 +24,6 @@ export default function Sidebar() {
         aria-label="Nails By Eimi — home"
       >
         <span className="font-display text-[22px] font-semibold text-wine">Nails By Eimi</span>
-        <span className="text-[9px] uppercase tracking-[0.3em] text-rose">Press-on Atelier</span>
       </Link>
 
       <nav className="flex-1 overflow-y-auto overscroll-contain px-3 py-5">

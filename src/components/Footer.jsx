@@ -19,7 +19,6 @@ export default function Footer() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="font-display text-[24px] font-semibold text-wine">Nails By Eimi</p>
-            <p className="text-[9px] uppercase tracking-[0.3em] text-rose">Press-on Atelier</p>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
               Hand-finished press-on sets, salon-grade gel and trade supplies, shipped across Pakistan.
             </p>
@@ -78,6 +77,12 @@ export default function Footer() {
                   <Icon name="mail" size={16} className="mt-0.5 shrink-0" />
                   {email}
                 </a>
+              </li>
+              <li>
+                <Link to="/track" className="flex items-start gap-2.5 transition hover:text-wine">
+                  <Icon name="truck" size={16} className="mt-0.5 shrink-0" />
+                  Track your order
+                </Link>
               </li>
             </ul>
           </div>

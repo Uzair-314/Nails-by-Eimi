@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import TopBar from './TopBar'
+import OrderStatusBanner from './OrderStatusBanner'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import SideDrawer from './SideDrawer'
@@ -40,6 +41,8 @@ export default function Layout() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <Header onOpenMenu={() => setMenuOpen(true)} onOpenSearch={() => setSearchOpen(true)} />
+
+          <OrderStatusBanner />
 
           <main id="main" className="flex-1">
             <Outlet />

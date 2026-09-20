@@ -136,6 +136,10 @@ export default function OrderPlaced() {
 
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <Link to="/" className="btn-primary">Continue shopping</Link>
+          <Link to="/track" className="btn-ghost">
+            <Icon name="truck" size={16} />
+            Track this order
+          </Link>
           {whatsapp && (
             <a
               href={whatsapp}

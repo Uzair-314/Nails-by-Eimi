@@ -36,6 +36,7 @@ earn loyalty points. Prices are in PKR and checkout is cash on delivery.
 | `/cart`, `/checkout` | Bag and checkout |
 | `/login` | Sign up, sign in, password reset — never required to buy |
 | `/order-placed` | Confirmation after checkout |
+| `/track` | Order status by number and phone, for customers without an account |
 | `/account/*` | Dashboard, orders, history, wishlist, addresses, payment, nail profile, rewards, settings |
 
 ## Architecture
