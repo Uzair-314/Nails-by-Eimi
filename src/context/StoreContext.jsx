@@ -10,8 +10,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import {
-  addToWishlist, getSettings, listCategories, listWishlist, mergeGuestCart,
-  removeFromWishlist, saveCart,
+  addToWishlist, getSettings, listCategories, listShippingMethods, listWishlist,
+  mergeGuestCart, removeFromWishlist, saveCart, shippingCostFor,
 } from '../lib/api'
 import { useAuth } from './AuthContext'
 
@@ -67,14 +67,15 @@ function cartReducer(state, action) {
   }
 }
 
-const DEFAULT_SHIPPING = { freeOver: 5000, flatRate: 300, minimumOrder: 1000 }
+const DEFAULT_MINIMUM = 1000
 
 export function StoreProvider({ children }) {
   const { isSignedIn } = useAuth()
   const [cart, dispatch] = useReducer(cartReducer, null, () => load(CART_KEY, []))
   const [wishlist, setWishlist] = useState(() => load(WISH_KEY, []))
   const [toasts, setToasts] = useState([])
-  const [shipping, setShipping] = useState(DEFAULT_SHIPPING)
+  const [minimumOrder, setMinimumOrder] = useState(DEFAULT_MINIMUM)
+  const [methods, setMethods] = useState(null)
   const [settings, setSettings] = useState({})
   const [categories, setCategories] = useState([])
 
@@ -123,13 +124,16 @@ export function StoreProvider({ children }) {
     getSettings()
       .then((s) => {
         setSettings(s)
-        setShipping({
-          freeOver: Number(s.shipping_free_over ?? DEFAULT_SHIPPING.freeOver),
-          flatRate: Number(s.shipping_flat_rate ?? DEFAULT_SHIPPING.flatRate),
-          minimumOrder: Number(s.minimum_order ?? DEFAULT_SHIPPING.minimumOrder),
-        })
+        setMinimumOrder(Number(s.minimum_order ?? DEFAULT_MINIMUM))
       })
       .catch(() => { /* keep whatever we have if the store is unreachable */ })
+
+    // What the bag quotes for delivery has to be what the order is actually
+    // charged, and that comes from the delivery methods in the admin — never
+    // from a separate setting that could drift away from them.
+    listShippingMethods()
+      .then(setMethods)
+      .catch(() => { /* same */ })
 
     listCategories()
       .then((rows) => setCategories(rows.filter((c) => c.is_active)))
@@ -213,17 +217,22 @@ export function StoreProvider({ children }) {
   const value = useMemo(() => {
     const count = cart.reduce((sum, line) => sum + line.qty, 0)
     const subtotal = cart.reduce((sum, line) => sum + line.qty * line.price, 0)
-    const delivery = subtotal === 0 || subtotal >= shipping.freeOver ? 0 : shipping.flatRate
+    // The checkout preselects the first method and `place_order` falls back to
+    // the same one, so quoting anything else here would show a total the order
+    // then contradicts.
+    const fallback = methods?.[0] ?? null
+    const delivery = methods == null ? null : subtotal === 0 ? 0 : shippingCostFor(fallback, subtotal)
+
     return {
       cart,
       count,
       subtotal,
       shipping: delivery,
-      total: subtotal + delivery,
-      shippingRules: shipping,
+      total: subtotal + (delivery ?? 0),
+      shippingRules: { freeOver: fallback?.freeOver ?? null, minimumOrder },
       settings,
       categories,
-      belowMinimum: subtotal > 0 && subtotal < shipping.minimumOrder,
+      belowMinimum: subtotal > 0 && subtotal < minimumOrder,
       addToCart,
       setQty: (id, qty) => dispatch({ type: 'setQty', id, qty }),
       removeFromCart: (id) => dispatch({ type: 'remove', id }),
@@ -234,7 +243,7 @@ export function StoreProvider({ children }) {
       toasts,
       toast,
     }
-  }, [cart, wishlist, toasts, shipping, settings, categories, addToCart, toggleWishlist, toast])
+  }, [cart, wishlist, toasts, minimumOrder, methods, settings, categories, addToCart, toggleWishlist, toast])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

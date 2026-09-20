@@ -110,7 +110,7 @@ export default function NailProfile() {
           </section>
 
           <section className="card p-6">
-            <h2 className="font-display text-[20px] font-semibold text-ink">Notes for the studio</h2>
+            <h2 className="font-display text-[20px] font-semibold text-ink">Notes for your order</h2>
 
             <label className="mt-4 block">
               <span className="mb-1.5 block text-[13px] font-medium text-ink">Allergies and sensitivities</span>

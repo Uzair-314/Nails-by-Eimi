@@ -23,7 +23,11 @@ export default function Cart() {
     )
   }
 
-  const toFreeShipping = Math.max(0, shippingRules.freeOver - subtotal)
+  // Null when no delivery method sets a threshold, in which case there is
+  // nothing to spend towards and the nudge would be meaningless.
+  const toFreeShipping = shippingRules.freeOver == null
+    ? 0
+    : Math.max(0, shippingRules.freeOver - subtotal)
 
   return (
     <div className="container-e py-12">
@@ -107,7 +111,9 @@ export default function Cart() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted">Delivery</dt>
-                <dd className="font-medium text-ink">{shipping === 0 ? 'Free' : formatPrice(shipping)}</dd>
+                <dd className="font-medium text-ink">
+                  {shipping == null ? 'Calculated at checkout' : shipping === 0 ? 'Free' : formatPrice(shipping)}
+                </dd>
               </div>
               <div className="flex justify-between border-t border-line pt-3">
                 <dt className="font-medium text-ink">Total</dt>

@@ -175,7 +175,7 @@ export async function getUser() {
 export const TIERS = [
   { name: 'Rose', threshold: 0, perk: '5% back in points on every order' },
   { name: 'Gold', threshold: 1500, perk: 'Free shipping, early access to drops' },
-  { name: 'Platinum', threshold: 3000, perk: 'Free shipping, a birthday set, studio priority' },
+  { name: 'Platinum', threshold: 3000, perk: 'Free shipping, a birthday set, priority support' },
 ]
 
 function tierProgress(points) {

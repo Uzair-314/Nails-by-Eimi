@@ -71,7 +71,7 @@ export default function Home() {
       <section className="container-e mt-16">
         <div className="card grid items-center gap-8 overflow-hidden p-0 lg:grid-cols-2">
           <div className="order-2 px-7 py-10 lg:order-1 lg:px-12">
-            <p className="eyebrow">The studio</p>
+            <p className="eyebrow">Made to fit</p>
             <h2 className="mt-3 font-display text-[30px] font-semibold leading-tight text-ink sm:text-[38px]">
               Sized to your hands, not a size chart
             </h2>

@@ -148,7 +148,7 @@ export default function MyOrders() {
                         <Icon name={order.tracking ? 'truck' : 'clock'} size={16} className="text-wine" />
                         {order.tracking
                           ? <>Tracking <strong className="font-medium">{order.tracking}</strong></>
-                          : 'Being prepared in the studio — tracking follows on dispatch.'}
+                          : 'Being prepared — tracking follows on dispatch.'}
                       </p>
                     </div>
                   </div>

@@ -21,7 +21,7 @@ export default function Footer() {
             <p className="font-display text-[24px] font-semibold text-wine">Nails By Eimi</p>
             <p className="text-[9px] uppercase tracking-[0.3em] text-rose">Press-on Atelier</p>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-              Hand-finished press-on sets, salon-grade gel and trade supplies — made in a small studio in South London.
+              Hand-finished press-on sets, salon-grade gel and trade supplies, shipped across Pakistan.
             </p>
             <div className="mt-5 flex gap-2">
               <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"
@@ -85,7 +85,10 @@ export default function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-line pt-6 sm:flex-row">
           <p className="text-[12px] text-muted">© {new Date().getFullYear()} Nails By Eimi. All rights reserved.</p>
-          <p className="text-[12px] text-muted">{`Free delivery over ${formatPrice(shippingRules.freeOver)}`} · 30-day returns</p>
+          <p className="text-[12px] text-muted">
+            {shippingRules.freeOver != null && `Free delivery over ${formatPrice(shippingRules.freeOver)} · `}
+            30-day returns
+          </p>
         </div>
       </div>
     </footer>

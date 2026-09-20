@@ -5,7 +5,7 @@ export default function NewArrivals() {
     <ProductListing
       eyebrow="Just landed"
       title="New Arrivals"
-      subtitle="The most recent additions to the studio — sets, shades and supplies, newest first."
+      subtitle="The most recent additions to the shop — sets, shades and supplies, newest first."
       defaultSort="newest"
       filters={[
         { value: 'press-on', label: 'Press-on sets' },
