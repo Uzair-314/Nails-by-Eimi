@@ -1,14 +1,11 @@
 /**
- * Business details shown in the top bar, footer and contact page.
- *
- * PLACEHOLDERS — replace the phone and email with the real ones before launch.
- * They live here so there is a single place to change them.
+ * Fallbacks for the shop's contact details, used only until the real ones load
+ * from `site_settings` — which is where they actually live, editable in the
+ * admin panel under Settings.
  */
 
 export const SITE = {
-  whatsapp: '+92 300 1234567',
-  /** Digits only, for the wa.me link. */
-  whatsappLink: '923001234567',
-  email: 'hello@nailsbyeimi.com',
+  whatsapp: '0322-4001139',
+  email: 'aimnejaz90@gmail.com',
   minimumOrder: 'Minimum order requirement is Rs. 1,000.',
 }

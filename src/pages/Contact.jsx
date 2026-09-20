@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Icon from '../components/Icon'
 import { PageHeading } from '../components/ui'
 import { sendContactMessage } from '../lib/api'
+import { whatsappLink } from '../lib/format'
 import { useStore } from '../context/StoreContext'
 import { SITE } from '../data/site'
 
@@ -15,7 +16,7 @@ export default function Contact() {
   const whatsapp = settings.contact_whatsapp ?? SITE.whatsapp
   const email = settings.contact_email ?? SITE.email
   const details = [
-    { icon: 'phone', title: 'WhatsApp', body: whatsapp, href: `https://wa.me/${String(whatsapp).replace(/\D/g, '')}` },
+    { icon: 'phone', title: 'WhatsApp', body: whatsapp, href: whatsappLink(whatsapp) },
     { icon: 'mail', title: 'Email', body: email, href: `mailto:${email}` },
     { icon: 'clock', title: 'Response time', body: 'Within one working day. Order issues are prioritised.' },
   ]

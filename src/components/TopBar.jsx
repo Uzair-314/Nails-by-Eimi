@@ -1,4 +1,5 @@
 import Icon from './Icon'
+import { whatsappLink } from '../lib/format'
 import { SITE } from '../data/site'
 import { useStore } from '../context/StoreContext'
 
@@ -19,7 +20,7 @@ export default function TopBar() {
       <div className="mx-auto flex max-w-[1200px] flex-col items-center gap-1 px-4 py-2.5 text-center sm:flex-row sm:justify-center sm:gap-6 sm:py-2">
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
           <a
-            href={`https://wa.me/${String(whatsapp).replace(/\D/g, '')}`}
+            href={whatsappLink(whatsapp)}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 text-[12px] leading-none text-white/90 transition hover:text-white"

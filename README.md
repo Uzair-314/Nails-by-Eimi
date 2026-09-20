@@ -34,7 +34,8 @@ earn loyalty points. Prices are in PKR and checkout is cash on delivery.
 | `/search?q=` | Full-catalogue search |
 | `/contact` | Message form |
 | `/cart`, `/checkout` | Bag and checkout |
-| `/login` | Sign up, sign in, password reset |
+| `/login` | Sign up, sign in, password reset — never required to buy |
+| `/order-placed` | Confirmation after checkout |
 | `/account/*` | Dashboard, orders, history, wishlist, addresses, payment, nail profile, rewards, settings |
 
 ## Architecture
@@ -46,6 +47,10 @@ call it and nothing else, so the data layer can change without touching screens.
 settings are readable by anyone; orders, profiles, addresses, discounts and
 contact messages return nothing unless you own them or are an admin. Hiding a
 button is convenience — the database is the boundary.
+
+**Checkout needs no account.** Contact details, delivery address, notes,
+shipping method and billing address are collected on the page itself. Signing in
+only prefills them.
 
 **Orders are placed by a database function**, not client code. `place_order`
 locks each product row, checks stock, writes the order and its lines, decrements

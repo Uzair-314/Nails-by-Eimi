@@ -9,6 +9,7 @@ import SearchPage from './pages/Search'
 import Contact from './pages/Contact'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
+import OrderPlaced from './pages/OrderPlaced'
 import Login from './pages/Login'
 import AccountLayout from './pages/account/AccountLayout'
 import DashboardHome from './pages/account/DashboardHome'
@@ -64,7 +65,9 @@ export default function App() {
         <Route path="contact" element={<Contact />} />
         <Route path="cart" element={<Cart />} />
         <Route path="login" element={<Login />} />
-        <Route path="checkout" element={<RequireAuth><Checkout /></RequireAuth>} />
+        {/* Deliberately open: nobody is asked to sign in to buy something. */}
+        <Route path="checkout" element={<Checkout />} />
+        <Route path="order-placed" element={<OrderPlaced />} />
 
         {/* The menu's "Rewards / Loyalty" entry lands on the member dashboard. */}
         <Route path="rewards" element={<Navigate to="/account/rewards" replace />} />

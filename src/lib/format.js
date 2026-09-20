@@ -32,3 +32,23 @@ export const pointsFor = (amount) => Math.round(amount * POINTS_PER_UNIT)
 
 export const titleCase = (s) =>
   s.replace(/(^|[\s-])\w/g, (m) => m.toUpperCase()).replace(/-/g, ' ')
+
+/**
+ * A wa.me link from a Pakistani number in any of the forms people write.
+ *
+ * `0322-4001139`, `+92 322 4001139` and `3224001139` all mean the same number,
+ * but wa.me only accepts the full international form with no punctuation.
+ * Stripping non-digits alone leaves a leading 0, which silently fails.
+ */
+export function whatsappLink(number, message) {
+  const digits = String(number ?? '').replace(/\D/g, '')
+  if (!digits) return null
+
+  const intl = digits.startsWith('92') ? digits
+    : digits.startsWith('0') ? `92${digits.slice(1)}`
+    : `92${digits}`
+
+  return message
+    ? `https://wa.me/${intl}?text=${encodeURIComponent(message)}`
+    : `https://wa.me/${intl}`
+}

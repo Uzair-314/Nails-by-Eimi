@@ -235,7 +235,13 @@ export async function listOrders() {
   return (data ?? []).map(toOrder)
 }
 
-export async function createOrder({ items, addressId, address, discountCode }) {
+/**
+ * Places an order. Works signed in or not — the database decides what is
+ * charged, so nothing here needs trusting.
+ */
+export async function createOrder({
+  items, addressId, address, billing, contact, discountCode, notes, shippingMethodId,
+}) {
   let snapshot = address
   if (!snapshot && addressId) {
     const { data } = await supabase.from('addresses').select('*').eq('id', addressId).maybeSingle()
@@ -245,10 +251,68 @@ export async function createOrder({ items, addressId, address, discountCode }) {
   const { data, error } = await supabase.rpc('place_order', {
     p_items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
     p_address: snapshot ?? null,
+    p_contact: contact ?? null,
     p_discount: discountCode ?? null,
+    p_notes: notes ?? null,
+    p_shipping: shippingMethodId ?? null,
+    p_billing: billing ?? null,
   })
   fail(error)
-  return toOrder({ ...data, order_items: [] })
+
+  return {
+    ...toOrder({ ...data, order_items: [] }),
+    deliveryNotes: data.delivery_notes,
+    shippingMethod: data.shipping_method,
+    contact: { name: data.guest_name, email: data.guest_email, phone: data.guest_phone },
+  }
+}
+
+/* --------------------------------------------------------------- shipping */
+
+export async function listShippingMethods() {
+  const { data, error } = await supabase
+    .from('shipping_methods')
+    .select('*')
+    .eq('is_active', true)
+    .order('sort_order')
+  fail(error)
+
+  return (data ?? []).map((m) => ({
+    id: m.id,
+    name: m.name,
+    description: m.description,
+    price: Number(m.price),
+    freeOver: m.free_over == null ? null : Number(m.free_over),
+    estimate: m.estimate,
+  }))
+}
+
+/** What this method costs for a given subtotal. */
+export const shippingCostFor = (method, subtotal) =>
+  !method ? 0
+    : method.freeOver != null && subtotal >= method.freeOver ? 0
+    : method.price
+
+/* ------------------------------------------------------- abandoned baskets */
+
+/**
+ * Remembers a half-finished checkout so it can be followed up. Keyed by an id
+ * the browser keeps, so returning updates the same row instead of piling up.
+ */
+export async function saveAbandonedCart({ id, name, email, phone, items, subtotal }) {
+  const { error } = await supabase.rpc('save_abandoned_cart', {
+    p_id: id,
+    p_name: name || null,
+    p_email: email || null,
+    p_phone: phone || null,
+    p_items: items.map((i) => ({ name: i.name, qty: i.qty, price: i.price })),
+    p_subtotal: subtotal,
+  })
+  if (error) throw error
+}
+
+export async function markCartConverted(id) {
+  await supabase.rpc('mark_cart_converted', { p_id: id })
 }
 
 /* -------------------------------------------------------------- addresses */

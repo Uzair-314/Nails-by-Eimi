@@ -4,7 +4,7 @@ import { MENU_LINKS } from '../data/navigation'
 import { useCategoryTree } from './NavSections'
 import { SITE } from '../data/site'
 import { useStore } from '../context/StoreContext'
-import { formatPrice } from '../lib/format'
+import { formatPrice, whatsappLink } from '../lib/format'
 
 export default function Footer() {
   const categories = useCategoryTree()
@@ -64,7 +64,7 @@ export default function Footer() {
             <ul className="mt-4 space-y-3 text-sm text-muted">
               <li>
                 <a
-                  href={`https://wa.me/${String(whatsapp).replace(/\D/g, '')}`}
+                  href={whatsappLink(whatsapp)}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-start gap-2.5 transition hover:text-wine"
