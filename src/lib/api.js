@@ -675,17 +675,35 @@ export async function listHeroSlides() {
     copy: s.copy,
     focal: `${s.focal_x}% ${s.focal_y}%`,
     cta: s.cta_label
-      ? { label: s.cta_label, to: heroSlideTarget(s) }
+      ? { label: s.cta_label, to: linkTarget(s) }
       : null,
   }))
 }
 
-/** Resolves a slide's button to a path. Null when the target has been deleted. */
-function heroSlideTarget(s) {
+/** Resolves a slide or announcement link to a path. Null when the target has gone. */
+function linkTarget(s) {
   switch (s.link_type) {
     case 'product':  return s.products?.slug  ? `/product/${s.products.slug}`   : null
     case 'category': return s.categories?.slug ? `/category/${s.categories.slug}` : null
     case 'url':      return s.url || null
     default:         return null
   }
+}
+
+/* ---------------------------------------------------------- announcements */
+
+/** The pink strip across the very top. Editable under Announcements in the admin. */
+export async function listAnnouncements() {
+  const { data, error } = await supabase
+    .from('announcements')
+    .select('*, products(slug), categories(slug)')
+    .eq('is_active', true)
+    .order('sort_order')
+  fail(error)
+
+  return (data ?? []).map((a) => ({
+    id: a.id,
+    text: a.text,
+    to: linkTarget(a),
+  }))
 }

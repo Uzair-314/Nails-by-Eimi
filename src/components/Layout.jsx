@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import AnnouncementBar from './AnnouncementBar'
 import TopBar from './TopBar'
 import OrderStatusBanner from './OrderStatusBanner'
 import Header from './Header'
@@ -31,7 +32,8 @@ export default function Layout() {
         Skip to content
       </a>
 
-      {/* Spans the full width, above the sidebar as well as the content. */}
+      {/* Both span the full width, above the sidebar as well as the content. */}
+      <AnnouncementBar />
       <TopBar />
 
       <div className="flex min-w-0 flex-1">
