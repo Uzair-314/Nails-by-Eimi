@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon from './Icon'
-import { trackOrderById } from '../lib/api'
+import { listNotifications, markNotificationsRead, trackOrderById } from '../lib/api'
 import { forgetOrder, markStatusSeen, placedOrders } from '../lib/placedOrders'
+import { useAuth } from '../context/AuthContext'
 
 /**
  * Tells a customer their order has moved.
  *
- * Almost nobody signs in, so there is no inbox to deliver to. Instead the
- * device that placed the order remembers the status it last showed, and this
- * says so when the shop reports a different one. Dismissing marks the new
- * status as seen rather than hiding the banner for good, so the next change
- * speaks up again.
+ * Two sources, because there are two kinds of customer. Almost nobody signs in,
+ * and a guest has no inbox to deliver to — so the device that placed the order
+ * remembers the status it last showed, and this says so when the shop reports a
+ * different one. An account holder has real notification rows instead, which is
+ * what carries the news to a phone that did not place the order.
+ *
+ * Dismissing settles that one update rather than hiding the banner for good, so
+ * the next change speaks up again.
  */
 
 const TONE = {
@@ -21,22 +25,58 @@ const TONE = {
   cancelled: { icon: 'close', line: 'was cancelled' },
 }
 
+const iconFor = (status) => TONE[status]?.icon ?? 'clock'
+
 export default function OrderStatusBanner() {
-  const [changed, setChanged] = useState([])
+  const { isSignedIn } = useAuth()
+  const [entries, setEntries] = useState([])
 
   const check = useCallback(async () => {
-    const remembered = placedOrders()
-    if (!remembered.length) return
-
     const found = []
-    for (const saved of remembered) {
-      const live = await trackOrderById(saved.id)
-      // The order is gone — stop asking about it on every page load.
+    // Orders this device already speaks for, so an account holder who ordered
+    // here is not told the same thing twice.
+    const covered = new Set()
+
+    for (const saved of placedOrders()) {
+      let live
+      try {
+        live = await trackOrderById(saved.id)
+      } catch {
+        // Could not reach the shop. Leave the order alone and try again later:
+        // a failed request is not evidence that the order has gone.
+        continue
+      }
+      // It really is gone — stop asking about it on every page load.
       if (!live) { forgetOrder(saved.id); continue }
-      if (live.status !== saved.seen) found.push({ id: saved.id, ...live })
+      covered.add(saved.id)
+      if (live.status === saved.seen) continue
+
+      const tone = TONE[live.status]
+      found.push({
+        key: `device:${saved.id}`,
+        status: live.status,
+        text: `Order #${live.orderNumber} ${tone ? tone.line : `is now ${live.status}`}.`,
+        tracking: live.tracking,
+        settle: () => markStatusSeen(saved.id, live.status),
+      })
     }
-    setChanged(found)
-  }, [])
+
+    if (isSignedIn) {
+      // Written by the database when the status changed, so the wording is the
+      // same one the admin sees.
+      for (const row of await listNotifications()) {
+        if (covered.has(row.order_id)) continue
+        found.push({
+          key: `account:${row.id}`,
+          status: row.status,
+          text: row.message,
+          settle: () => markNotificationsRead([row.id]),
+        })
+      }
+    }
+
+    setEntries(found)
+  }, [isSignedIn])
 
   useEffect(() => {
     check()
@@ -51,40 +91,37 @@ export default function OrderStatusBanner() {
     }
   }, [check])
 
-  if (!changed.length) return null
+  if (!entries.length) return null
 
-  const dismiss = (order) => {
-    markStatusSeen(order.id, order.status)
-    setChanged((list) => list.filter((o) => o.id !== order.id))
+  const dismiss = (entry) => {
+    entry.settle()
+    setEntries((list) => list.filter((e) => e.key !== entry.key))
   }
 
   return (
     <div className="border-b border-line bg-wine-50">
-      {changed.map((order) => {
-        const tone = TONE[order.status] ?? { icon: 'clock', line: `is now ${order.status}` }
-        return (
-          <div key={order.id} className="container-e flex items-center gap-3 py-2.5">
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-wine text-white">
-              <Icon name={tone.icon} size={14} />
-            </span>
-            <p className="flex-1 text-[13px] leading-snug text-ink">
-              Order <strong className="font-medium">#{order.orderNumber}</strong> {tone.line}.
-              {order.tracking && <span className="text-muted"> Tracking {order.tracking}.</span>}
-            </p>
-            <Link to="/track" className="hidden text-[13px] text-wine hover:underline sm:block">
-              Track order
-            </Link>
-            <button
-              type="button"
-              onClick={() => dismiss(order)}
-              aria-label="Dismiss"
-              className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted transition hover:bg-white hover:text-ink"
-            >
-              <Icon name="close" size={14} />
-            </button>
-          </div>
-        )
-      })}
+      {entries.map((entry) => (
+        <div key={entry.key} className="container-e flex items-center gap-3 py-2.5">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-wine text-white">
+            <Icon name={iconFor(entry.status)} size={14} />
+          </span>
+          <p className="flex-1 text-[13px] leading-snug text-ink">
+            {entry.text}
+            {entry.tracking && <span className="text-muted"> Tracking {entry.tracking}.</span>}
+          </p>
+          <Link to="/track" className="hidden text-[13px] text-wine hover:underline sm:block">
+            Track order
+          </Link>
+          <button
+            type="button"
+            onClick={() => dismiss(entry)}
+            aria-label="Dismiss"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted transition hover:bg-white hover:text-ink"
+          >
+            <Icon name="close" size={14} />
+          </button>
+        </div>
+      ))}
     </div>
   )
 }

@@ -602,13 +602,15 @@ const toTracked = (row) => !row ? null : {
 /**
  * Looks up an order by its uuid, which the browser keeps after checkout.
  *
- * Returns null rather than throwing when the order has gone, so a stale id in
- * localStorage quietly drops off instead of breaking the page it sits on.
+ * Null means the order is genuinely gone. A failed request throws instead, and
+ * the difference matters: the caller forgets an order it is told no longer
+ * exists, and for a guest that uuid is the only handle they have on it. A
+ * network blip must not be mistaken for a deletion.
  */
 export async function trackOrderById(id) {
   if (!id) return null
   const { data, error } = await supabase.rpc('track_order_by_id', { p_id: id })
-  if (error) return null
+  fail(error)
   return toTracked(data?.[0])
 }
 
