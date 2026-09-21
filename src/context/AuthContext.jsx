@@ -15,6 +15,11 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // A recovery link signs the customer in and leaves it to the app to ask for
+  // the new password. Without this flag the link just drops them into their
+  // account already logged in, and the password never actually changes.
+  const [recovery, setRecovery] = useState(false)
+
   const refreshProfile = useCallback(async () => {
     try {
       setProfile(await getUser())
@@ -33,7 +38,8 @@ export function AuthProvider({ children }) {
       setLoading(false)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event, next) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       if (!active) return
       setSession(next)
       if (next) await refreshProfile()
@@ -44,6 +50,7 @@ export function AuthProvider({ children }) {
   }, [refreshProfile])
 
   const value = useMemo(() => ({
+    recovery,
     session,
     user: session?.user ?? null,
     profile,
@@ -79,7 +86,18 @@ export function AuthProvider({ children }) {
       })
       if (error) throw error
     },
-  }), [session, profile, loading, refreshProfile])
+
+    /**
+     * Supabase enforces the project's password rules here, not at sign-in, so
+     * this is where a weak password is actually refused. Its error says which
+     * rule failed, so it is passed through rather than replaced.
+     */
+    changePassword: async (password) => {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) throw error
+      setRecovery(false)
+    },
+  }), [session, profile, loading, recovery, refreshProfile])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

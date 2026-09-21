@@ -3,6 +3,7 @@ import Icon from '../../components/Icon'
 import { PageHeading, Skeleton } from '../../components/ui'
 import { getUser, updateUser } from '../../lib/api'
 import { useStore } from '../../context/StoreContext'
+import { useAuth } from '../../context/AuthContext'
 
 const PREFERENCES = [
   { key: 'emailDrops', title: 'New drop alerts', body: 'An email when a collection goes live.' },
@@ -134,12 +135,7 @@ export default function AccountSettings() {
           </span>
           <h2 className="font-display text-[20px] font-semibold text-ink">Security</h2>
         </div>
-        <p className="mt-4 text-[13px] leading-relaxed text-muted">
-          Password and two-factor settings are handled by the auth provider and will be wired up alongside sign-in.
-        </p>
-        <button type="button" onClick={() => toast('Sign-in is not wired up in this build')} className="btn-ghost mt-4">
-          Change password
-        </button>
+        <ChangePassword />
       </section>
 
       <section className="mt-6 rounded-card border border-red-200 bg-red-50/60 p-6">
@@ -172,5 +168,119 @@ export default function AccountSettings() {
         )}
       </section>
     </div>
+  )
+}
+
+/**
+ * Changing the account password.
+ *
+ * Also the landing spot for a recovery link, which signs the customer in and
+ * then leaves it to the app to ask for the new password — without this form
+ * the link only ever logged them in and changed nothing.
+ */
+function ChangePassword() {
+  const { recovery, changePassword } = useAuth()
+  const { toast } = useStore()
+
+  const [open, setOpen] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  // Arriving from the email link opens the form without being asked.
+  useEffect(() => { if (recovery) setOpen(true) }, [recovery])
+
+  // Typed twice: a typo is not discovered until the next sign-in, by which
+  // point the only way back in is another recovery email.
+  const mismatch = confirm.length > 0 && password !== confirm
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (mismatch) return
+    setBusy(true)
+    setError(null)
+    try {
+      await changePassword(password)
+      setPassword('')
+      setConfirm('')
+      setOpen(false)
+      toast('Password changed')
+    } catch (err) {
+      // Supabase names the rule that failed; a generic message would leave the
+      // person guessing at what to fix.
+      setError(err.message ?? 'Could not change the password')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <>
+        <p className="mt-4 text-[13px] leading-relaxed text-muted">
+          Change the password you sign in with.
+        </p>
+        <button type="button" onClick={() => setOpen(true)} className="btn-ghost mt-4">
+          Change password
+        </button>
+      </>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-4">
+      {recovery && (
+        <p className="mb-4 rounded-xl bg-blush px-3.5 py-2.5 text-[13px] leading-relaxed text-ink">
+          You are signed in from the link in your email. Choose a new password to finish.
+        </p>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink">New password</span>
+          <input
+            required
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+            className="field"
+            placeholder="At least 8 characters"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink">Type it again</span>
+          <input
+            required
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            autoComplete="new-password"
+            className="field"
+            placeholder="The same password"
+          />
+          {mismatch && <span className="mt-1.5 block text-[12px] text-wine">These two do not match.</span>}
+        </label>
+      </div>
+
+      {error && (
+        <p className="mt-4 flex items-start gap-2 rounded-xl bg-blush px-3.5 py-2.5 text-[13px] leading-relaxed text-ink">
+          <Icon name="info" size={14} className="mt-0.5 shrink-0 text-wine" />
+          {error}
+        </p>
+      )}
+
+      <div className="mt-5 flex flex-wrap gap-3">
+        <button type="submit" disabled={busy || mismatch || !password} className="btn-primary disabled:opacity-50">
+          {busy ? 'Saving…' : 'Save new password'}
+        </button>
+        {!recovery && (
+          <button type="button" onClick={() => { setOpen(false); setError(null) }} className="btn-ghost">
+            Cancel
+          </button>
+        )}
+      </div>
+    </form>
   )
 }
