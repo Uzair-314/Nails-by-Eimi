@@ -183,6 +183,7 @@ function ChangePassword() {
   const { toast } = useStore()
 
   const [open, setOpen] = useState(false)
+  const [current, setCurrent] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
@@ -201,7 +202,8 @@ function ChangePassword() {
     setBusy(true)
     setError(null)
     try {
-      await changePassword(password)
+      await changePassword({ currentPassword: current, newPassword: password })
+      setCurrent('')
       setPassword('')
       setConfirm('')
       setOpen(false)
@@ -234,6 +236,22 @@ function ChangePassword() {
         <p className="mb-4 rounded-xl bg-blush px-3.5 py-2.5 text-[13px] leading-relaxed text-ink">
           You are signed in from the link in your email. Choose a new password to finish.
         </p>
+      )}
+
+      {/* Not asked for during recovery: they are here because they forgot it. */}
+      {!recovery && (
+        <label className="mb-4 block max-w-sm">
+          <span className="mb-1.5 block text-[13px] font-medium text-ink">Current password</span>
+          <input
+            required
+            type="password"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value)}
+            autoComplete="current-password"
+            className="field"
+            placeholder="The password you sign in with now"
+          />
+        </label>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -272,11 +290,15 @@ function ChangePassword() {
       )}
 
       <div className="mt-5 flex flex-wrap gap-3">
-        <button type="submit" disabled={busy || mismatch || !password} className="btn-primary disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={busy || mismatch || !password || (!recovery && !current)}
+          className="btn-primary disabled:opacity-50"
+        >
           {busy ? 'Saving…' : 'Save new password'}
         </button>
         {!recovery && (
-          <button type="button" onClick={() => { setOpen(false); setError(null) }} className="btn-ghost">
+          <button type="button" onClick={() => { setOpen(false); setError(null); setCurrent('') }} className="btn-ghost">
             Cancel
           </button>
         )}
