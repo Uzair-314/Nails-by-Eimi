@@ -41,8 +41,10 @@ export default function TrackOrder() {
       const found = await trackOrder(form.orderNumber.trim(), form.phone.trim())
       setResult(found)
       setSearched(true)
-    } catch {
-      setError('Could not check that just now — please try again.')
+    } catch (err) {
+      // Same reasoning as the contact form: a rate limit that says nothing
+      // looks broken, and the person keeps hammering it.
+      setError(err?.message ?? 'Could not check that just now — please try again.')
     } finally {
       setBusy(false)
     }

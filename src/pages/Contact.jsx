@@ -34,8 +34,10 @@ export default function Contact() {
       setSent(true)
       setForm({ name: '', email: '', topic: TOPICS[0], message: '' })
       toast('Message sent — we will reply within a day')
-    } catch {
-      toast('Could not send that message — please try again')
+    } catch (err) {
+      // Pass the reason through. Being rate limited and told only to "try
+      // again" reads as a fault in the form, and the person retries at once.
+      toast(err?.message ?? 'Could not send that message — please try again')
     } finally {
       setSending(false)
     }
