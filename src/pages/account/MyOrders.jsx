@@ -21,13 +21,29 @@ export default function MyOrders() {
     status === 'all' ? orders?.length ?? 0 : orders?.filter((o) => o.status === status).length ?? 0
 
   const reorder = async (order) => {
+    // `found` is index-aligned with `order.items` — a piece that no longer
+    // exists comes back null and keeps its slot. Pair the quantity to the
+    // product *before* dropping those slots: filtering first and then reading
+    // `order.items[i]` shifted every quantity after the first missing piece
+    // onto the wrong product.
     const found = await Promise.all(order.items.map((item) => getProduct(item.productSlug)))
-    const available = found.filter(Boolean)
-    if (available.length === 0) {
+    const lines = found
+      .map((product, i) => (product ? { product, qty: order.items[i].qty } : null))
+      .filter(Boolean)
+
+    if (lines.length === 0) {
       toast('Those pieces are no longer available')
       return
     }
-    available.forEach((product, i) => addToCart(product, order.items[i].qty))
+
+    lines.forEach(({ product, qty }) => addToCart(product, qty))
+
+    // Say what could not be brought back, rather than quietly returning a
+    // smaller bag than the order being reordered.
+    const missing = order.items.length - lines.length
+    if (missing > 0) {
+      toast(`${missing} ${missing === 1 ? 'piece is' : 'pieces are'} no longer available`)
+    }
   }
 
   const active = orders?.filter((o) => o.status !== 'delivered').length ?? 0
