@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import Icon from './Icon'
+import { Skeleton } from './ui'
 import { MENU_LINKS } from '../data/navigation'
 import { useStore } from '../context/StoreContext'
 import { useAuth } from '../context/AuthContext'
@@ -71,6 +72,7 @@ export function CategoryList({ onNavigate }) {
   const [expanded, setExpanded] = useState(() => new Set())
   const location = useLocation()
   const tree = useCategoryTree()
+  const { storeLoading } = useStore()
 
   // Auto-expand whichever group contains the current route.
   useEffect(() => {
@@ -86,6 +88,22 @@ export function CategoryList({ onNavigate }) {
       next.has(slug) ? next.delete(slug) : next.add(slug)
       return next
     })
+
+  // The shelves come from the database, so on a slow connection this list is
+  // empty for as long as that takes. Six rows of roughly the right height keep
+  // the rail from collapsing and then jumping once they arrive.
+  if (storeLoading && !tree.length) {
+    return (
+      <ul className="space-y-0.5" aria-hidden="true">
+        {['w-2/3', 'w-4/5', 'w-1/2', 'w-3/4', 'w-3/5', 'w-4/5'].map((w, i) => (
+          <li key={i} className="flex items-center gap-3 px-3 py-3">
+            <Skeleton className="h-[19px] w-[19px] shrink-0 rounded-md" />
+            <Skeleton className={`h-3 ${w}`} />
+          </li>
+        ))}
+      </ul>
+    )
+  }
 
   return (
     <ul className="space-y-0.5">

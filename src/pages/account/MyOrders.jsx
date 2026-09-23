@@ -48,7 +48,11 @@ export default function MyOrders() {
             </span>
             <span className="text-[13px] leading-tight">
               <span className="block text-muted">Active orders</span>
-              <span className="font-medium text-ink">{active} {active === 1 ? 'set' : 'sets'}</span>
+              {loading ? (
+                <Skeleton className="mt-1 h-3 w-14" />
+              ) : (
+                <span className="font-medium text-ink">{active} {active === 1 ? 'set' : 'sets'}</span>
+              )}
             </span>
           </div>
           <div className="card hidden items-center gap-3 px-4 py-3 sm:flex">
@@ -57,7 +61,11 @@ export default function MyOrders() {
             </span>
             <span className="text-[13px] leading-tight">
               <span className="block text-muted">Total ordered</span>
-              <span className="font-medium text-ink">{totalSets} sets</span>
+              {loading ? (
+                <Skeleton className="mt-1 h-3 w-14" />
+              ) : (
+                <span className="font-medium text-ink">{totalSets} sets</span>
+              )}
             </span>
           </div>
         </div>
@@ -71,7 +79,8 @@ export default function MyOrders() {
             onClick={() => setFilter(status)}
             className={`pill ${filter === status ? 'pill-active' : ''}`}
           >
-            {status === 'all' ? 'All Orders' : status[0].toUpperCase() + status.slice(1)} ({countFor(status)})
+            {status === 'all' ? 'All Orders' : status[0].toUpperCase() + status.slice(1)}
+            {loading ? '' : ` (${countFor(status)})`}
           </button>
         ))}
       </div>

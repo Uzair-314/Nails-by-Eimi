@@ -10,25 +10,25 @@ const STATUS_TONE = { processing: 'rose', shipped: 'lilac', delivered: 'sage' }
 
 export default function DashboardHome() {
   const { data: user, loading: userLoading } = useAsync(getUser, [])
-  const { data: orders } = useAsync(listOrders, [])
-  const { data: picks } = useAsync(() => listProducts({ sort: 'featured', limit: 3 }), [])
+  const { data: orders, loading: ordersLoading } = useAsync(listOrders, [])
+  const { data: picks, loading: picksLoading } = useAsync(() => listProducts({ sort: 'featured', limit: 3 }), [])
   const { wishlist } = useStore()
 
   const active = orders?.filter((o) => o.status !== 'delivered').length ?? 0
   const latest = orders?.[0]
 
   const stats = [
-    { icon: 'truck', label: 'Active orders', value: `${active}` },
-    { icon: 'bag', label: 'Total ordered', value: `${orders?.length ?? 0} sets` },
-    { icon: 'heart', label: 'Wishlist', value: `${wishlist.length} saved` },
-    { icon: 'gift', label: 'Points balance', value: formatPoints(user?.points ?? 0) },
+    { icon: 'truck', label: 'Active orders', value: `${active}`, pending: ordersLoading },
+    { icon: 'bag', label: 'Total ordered', value: `${orders?.length ?? 0} sets`, pending: ordersLoading },
+    { icon: 'heart', label: 'Wishlist', value: `${wishlist.length} saved`, pending: false },
+    { icon: 'gift', label: 'Points balance', value: formatPoints(user?.points ?? 0), pending: userLoading },
   ]
 
   return (
     <div>
       <PageHeading
         eyebrow="Eimi member dashboard"
-        title={userLoading ? 'Welcome back' : `Welcome back, ${user.firstName}`}
+        title={userLoading || !user ? 'Welcome back' : `Welcome back, ${user.firstName}`}
         subtitle="Your orders, points and saved pieces, all in one place."
       />
 
@@ -39,7 +39,11 @@ export default function DashboardHome() {
               <Icon name={stat.icon} size={17} />
             </span>
             <p className="mt-3 text-[11px] uppercase tracking-[0.12em] text-muted">{stat.label}</p>
-            <p className="mt-0.5 font-display text-[22px] font-semibold text-ink">{stat.value}</p>
+            {stat.pending ? (
+              <Skeleton className="mt-2 h-[22px] w-20" />
+            ) : (
+              <p className="mt-0.5 font-display text-[22px] font-semibold text-ink">{stat.value}</p>
+            )}
           </div>
         ))}
       </div>
@@ -94,7 +98,7 @@ export default function DashboardHome() {
 
         <section className="card p-6">
           <h2 className="font-display text-[20px] font-semibold text-ink">Eimi Club</h2>
-          {userLoading ? (
+          {userLoading || !user ? (
             <Skeleton className="mt-4 h-24 w-full" />
           ) : (
             <>
@@ -135,7 +139,17 @@ export default function DashboardHome() {
           <Link to="/new-arrivals" className="text-[13px] text-wine transition hover:underline">Shop new in</Link>
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
-          {(picks ?? []).map((product) => (
+          {picksLoading && !picks?.length
+            ? Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="card overflow-hidden p-0">
+                  <Skeleton className="aspect-[4/3] w-full rounded-none" />
+                  <div className="space-y-2 p-4">
+                    <Skeleton className="h-3 w-3/4" />
+                    <Skeleton className="h-3 w-1/3" />
+                  </div>
+                </div>
+              ))
+            : (picks ?? []).map((product) => (
             <Link key={product.id} to={`/product/${product.slug}`} className="card group overflow-hidden transition hover:shadow-lift">
               <img
                 src={product.image}
@@ -147,7 +161,7 @@ export default function DashboardHome() {
                 <p className="mt-1 text-[14px] font-semibold text-wine">{formatPrice(product.price)}</p>
               </div>
             </Link>
-          ))}
+              ))}
         </div>
       </section>
     </div>

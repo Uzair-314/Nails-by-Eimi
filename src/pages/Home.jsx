@@ -2,10 +2,11 @@ import { Link } from 'react-router-dom'
 import HeroCarousel from '../components/HeroCarousel'
 import ProductCard from '../components/ProductCard'
 import Icon from '../components/Icon'
-import { ProductGridSkeleton, SectionHeading } from '../components/ui'
+import { ProductGridSkeleton, SectionHeading, Skeleton } from '../components/ui'
 import { listProducts } from '../lib/api'
 import useAsync from '../hooks/useAsync'
 import { useCategoryTree } from '../components/NavSections'
+import { useStore } from '../context/StoreContext'
 
 const PROMISES = [
   { icon: 'truck', title: 'Free delivery', body: 'On every order over Rs 5,000, dispatched next working day.' },
@@ -40,6 +41,7 @@ function Shelf({ eyebrow, title, to, query }) {
 
 export default function Home() {
   const categories = useCategoryTree()
+  const { storeLoading } = useStore()
 
   return (
     <div className="pb-4 pt-6">
@@ -49,7 +51,17 @@ export default function Home() {
       <section className="container-e mt-12">
         <SectionHeading eyebrow="Shop by" title="Categories" />
         <div className="rail sm:grid sm:grid-cols-5 sm:gap-5">
-          {categories.map((cat) => (
+          {storeLoading && !categories.length
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="card flex w-[42vw] shrink-0 snap-start flex-col items-center gap-3 px-4 py-6 sm:w-auto"
+                >
+                  <Skeleton className="h-14 w-14 rounded-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              ))
+            : categories.map((cat) => (
             <Link
               key={cat.slug}
               to={`/category/${cat.slug}`}
@@ -61,7 +73,7 @@ export default function Home() {
               </span>
               <span className="text-[13px] font-medium leading-snug text-ink">{cat.name}</span>
             </Link>
-          ))}
+              ))}
         </div>
       </section>
 

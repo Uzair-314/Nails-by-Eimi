@@ -78,6 +78,10 @@ export function StoreProvider({ children }) {
   const [methods, setMethods] = useState(null)
   const [settings, setSettings] = useState({})
   const [categories, setCategories] = useState([])
+  // False until the first pass over the admin-editable data has finished, so the
+  // chrome can show skeletons instead of an empty menu and a delivery threshold
+  // of zero. Focus refetches never flip it back — what is on screen stays.
+  const [storeReady, setStoreReady] = useState(false)
 
   const hydrating = useRef(false)
   const syncTimer = useRef(null)
@@ -121,23 +125,29 @@ export function StoreProvider({ children }) {
   // Settings and categories are both editable in the admin panel, so the shop
   // reads them from the database rather than from a file in the bundle.
   const loadStoreData = useCallback(() => {
-    getSettings()
+    const settled = []
+
+    settled.push(getSettings()
       .then((s) => {
         setSettings(s)
         setMinimumOrder(Number(s.minimum_order ?? DEFAULT_MINIMUM))
       })
-      .catch(() => { /* keep whatever we have if the store is unreachable */ })
+      .catch(() => { /* keep whatever we have if the store is unreachable */ }))
 
     // What the bag quotes for delivery has to be what the order is actually
     // charged, and that comes from the delivery methods in the admin — never
     // from a separate setting that could drift away from them.
-    listShippingMethods()
+    settled.push(listShippingMethods()
       .then(setMethods)
-      .catch(() => { /* same */ })
+      .catch(() => { /* same */ }))
 
-    listCategories()
+    settled.push(listCategories()
       .then((rows) => setCategories(rows.filter((c) => c.is_active)))
-      .catch(() => { /* same */ })
+      .catch(() => { /* same */ }))
+
+    // Settled, not fulfilled: a shop that cannot reach the database has to stop
+    // showing skeletons too, or a failed load pulses grey for ever.
+    Promise.all(settled).then(() => setStoreReady(true))
   }, [])
 
   // Re-read when the tab regains focus, so a category renamed or a delivery
@@ -232,6 +242,7 @@ export function StoreProvider({ children }) {
       shippingRules: { freeOver: fallback?.freeOver ?? null, minimumOrder },
       settings,
       categories,
+      storeLoading: !storeReady,
       belowMinimum: subtotal > 0 && subtotal < minimumOrder,
       addToCart,
       setQty: (id, qty) => dispatch({ type: 'setQty', id, qty }),
@@ -243,7 +254,7 @@ export function StoreProvider({ children }) {
       toasts,
       toast,
     }
-  }, [cart, wishlist, toasts, minimumOrder, methods, settings, categories, addToCart, toggleWishlist, toast])
+  }, [cart, wishlist, toasts, minimumOrder, methods, settings, categories, storeReady, addToCart, toggleWishlist, toast])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

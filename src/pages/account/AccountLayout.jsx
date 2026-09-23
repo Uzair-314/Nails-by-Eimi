@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 import Icon from '../../components/Icon'
+import { Skeleton } from '../../components/ui'
 import useAsync from '../../hooks/useAsync'
 import { getUser } from '../../lib/api'
 import { useStore } from '../../context/StoreContext'
@@ -24,7 +25,7 @@ const ACCOUNT_NAV = [
  * second rail — at every width, not just on mobile.
  */
 export default function AccountLayout() {
-  const { data: user } = useAsync(getUser, [])
+  const { data: user, loading: userLoading } = useAsync(getUser, [])
   const { toast } = useStore()
   const { signOut, isAdmin } = useAuth()
   const navigate = useNavigate()
@@ -47,10 +48,19 @@ export default function AccountLayout() {
               {(user?.firstName?.[0] ?? 'A') + (user?.lastName?.[0] ?? '')}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[14px] font-medium text-ink">
-                {user ? `${user.firstName} ${user.lastName}` : 'Your account'}
-              </p>
-              <p className="truncate text-[11px] text-rose">{user ? `${user.tier} member` : '—'}</p>
+              {userLoading && !user ? (
+                <>
+                  <Skeleton className="h-3.5 w-32" />
+                  <Skeleton className="mt-2 h-2.5 w-20" />
+                </>
+              ) : (
+                <>
+                  <p className="truncate text-[14px] font-medium text-ink">
+                    {user ? `${user.firstName} ${user.lastName}` : 'Your account'}
+                  </p>
+                  <p className="truncate text-[11px] text-rose">{user ? `${user.tier} member` : '—'}</p>
+                </>
+              )}
             </div>
           </div>
 

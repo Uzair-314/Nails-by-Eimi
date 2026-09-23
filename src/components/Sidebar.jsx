@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Icon from './Icon'
+import { Skeleton } from './ui'
 import { formatPrice } from '../lib/format'
 import { useStore } from '../context/StoreContext'
 import NavSections from './NavSections'
@@ -11,7 +12,7 @@ import NavSections from './NavSections'
  * Sticks full-height and scrolls independently of the page.
  */
 export default function Sidebar() {
-  const { shippingRules } = useStore()
+  const { shippingRules, storeLoading } = useStore()
 
   return (
     <aside
@@ -31,7 +32,11 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-line/80 px-5 py-4">
-        <p className="text-[11px] text-muted">{`Free delivery over ${formatPrice(shippingRules.freeOver)}`}</p>
+        {shippingRules.freeOver == null ? (
+          storeLoading ? <Skeleton className="h-3 w-40" /> : null
+        ) : (
+          <p className="text-[11px] text-muted">{`Free delivery over ${formatPrice(shippingRules.freeOver)}`}</p>
+        )}
         <div className="mt-3 flex gap-2">
           <a
             href="https://instagram.com"
