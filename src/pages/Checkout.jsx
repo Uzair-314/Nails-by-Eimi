@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
-import { Badge, EmptyState, PageHeading } from '../components/ui'
+import { Badge, EmptyState, PageHeading, Skeleton } from '../components/ui'
 import useAsync from '../hooks/useAsync'
 import {
   createOrder, listAddresses, listShippingMethods, markCartConverted,
@@ -396,7 +396,11 @@ export default function Checkout() {
 
           <Section step="3" title="Shipping method">
             {!methods ? (
-              <p className="text-sm text-muted">Loading…</p>
+              <div className="space-y-2">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <Skeleton key={i} className="h-[62px] w-full rounded-xl" />
+                ))}
+              </div>
             ) : methods.length === 0 ? (
               <p className="text-sm text-muted">No delivery options are set up yet.</p>
             ) : (
