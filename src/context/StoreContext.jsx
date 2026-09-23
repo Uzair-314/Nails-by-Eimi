@@ -82,6 +82,9 @@ export function StoreProvider({ children }) {
   // chrome can show skeletons instead of an empty menu and a delivery threshold
   // of zero. Focus refetches never flip it back — what is on screen stays.
   const [storeReady, setStoreReady] = useState(false)
+  // The bag drawer. Adding something opens it, which is the confirmation that
+  // it worked — the header's cart button still goes to the full page.
+  const [cartOpen, setCartOpen] = useState(false)
 
   const hydrating = useRef(false)
   const syncTimer = useRef(null)
@@ -201,10 +204,13 @@ export function StoreProvider({ children }) {
     return () => { active = false }
   }, [isSignedIn])
 
+  const openCart = useCallback(() => setCartOpen(true), [])
+  const closeCart = useCallback(() => setCartOpen(false), [])
+
   const addToCart = useCallback((product, qty = 1) => {
     dispatch({ type: 'add', product, qty })
-    toast(`${product.name} added to bag`)
-  }, [toast])
+    setCartOpen(true)
+  }, [])
 
   const toggleWishlist = useCallback(async (product) => {
     const saved = wishlist.some((it) => it.id === product.id)
@@ -243,6 +249,9 @@ export function StoreProvider({ children }) {
       settings,
       categories,
       storeLoading: !storeReady,
+      cartOpen,
+      openCart,
+      closeCart,
       belowMinimum: subtotal > 0 && subtotal < minimumOrder,
       addToCart,
       setQty: (id, qty) => dispatch({ type: 'setQty', id, qty }),
@@ -254,7 +263,8 @@ export function StoreProvider({ children }) {
       toasts,
       toast,
     }
-  }, [cart, wishlist, toasts, minimumOrder, methods, settings, categories, storeReady, addToCart, toggleWishlist, toast])
+  }, [cart, wishlist, toasts, minimumOrder, methods, settings, categories, storeReady, cartOpen,
+      addToCart, openCart, closeCart, toggleWishlist, toast])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

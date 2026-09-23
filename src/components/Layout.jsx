@@ -6,6 +6,7 @@ import OrderStatusBanner from './OrderStatusBanner'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import SideDrawer from './SideDrawer'
+import CartDrawer from './CartDrawer'
 import SearchOverlay from './SearchOverlay'
 import Footer from './Footer'
 import { Toasts } from './ui'
@@ -55,6 +56,7 @@ export default function Layout() {
       </div>
 
       <SearchOverlay open={searchOpen} onClose={closeSearch} />
+      <CartDrawer />
       <Toasts toasts={toasts} />
     </div>
   )
