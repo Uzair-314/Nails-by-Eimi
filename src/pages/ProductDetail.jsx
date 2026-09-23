@@ -84,6 +84,18 @@ export default function ProductDetail() {
             {soldOut && <Badge tone="neutral">Sold out</Badge>}
           </div>
 
+          {product.colorHex && (
+            <div className="mt-4 flex items-center gap-2.5">
+              <span
+                className="h-7 w-7 shrink-0 rounded-full ring-1 ring-black/10"
+                style={{ background: product.colorHex }}
+              />
+              <span className="text-[14px] text-ink">
+                Shade <span className="font-medium">{product.color ?? 'as pictured'}</span>
+              </span>
+            </div>
+          )}
+
           <p className="mt-5 flex items-baseline gap-3">
             <span className="font-display text-[32px] font-semibold text-wine">{formatPrice(product.price)}</span>
             {product.onSale && (

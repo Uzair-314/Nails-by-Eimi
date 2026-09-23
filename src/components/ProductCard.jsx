@@ -44,6 +44,16 @@ export default function ProductCard({ product, className = '' }) {
           <h3 className="truncate text-[14px] font-medium text-ink transition group-hover:text-wine">{product.name}</h3>
         </Link>
 
+        {product.colorHex && (
+          <p className="-mt-0.5 flex items-center gap-1.5 text-[12px] text-muted">
+            <span
+              className="h-3 w-3 shrink-0 rounded-full ring-1 ring-black/10"
+              style={{ background: product.colorHex }}
+            />
+            <span className="truncate">{product.color ?? 'Shade'}</span>
+          </p>
+        )}
+
         <div className="flex items-center justify-between gap-2">
           <p className="flex items-baseline gap-2">
             <span className="text-[15px] font-semibold text-wine">{formatPrice(product.price)}</span>

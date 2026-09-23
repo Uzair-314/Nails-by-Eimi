@@ -51,6 +51,11 @@ function toProduct(row) {
     category: primary?.slug ?? null,
     categoryName: primary?.name ?? null,
     tags: row.tags ?? [],
+    // The shade the admin picked. Both are null on a product that has none, and
+    // undefined on a shop still reading a database without the columns — so
+    // every render guards on the value rather than assuming it is there.
+    color: row.color_name ?? null,
+    colorHex: row.color_hex ?? null,
     rating: Number(row.rating),
     reviews: row.reviews_count,
     createdAt: row.created_at,
